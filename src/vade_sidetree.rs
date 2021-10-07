@@ -72,30 +72,31 @@ impl VadePlugin for VadeSidetree {
         let json = serde_json::to_string(&create_operation)?;
         let mut api_url = self.config.sidetree_rest_api_url.clone();
         api_url.push_str("operations");
+        println!("side tree api response: {}", &json);
         // parse string to desired Object
-        let create_result: DIDCreateResult = serde_json::from_str(&json)?;
-        let suffix_data_base64 = &encode_config(
-            serde_json::to_string(&create_result.operation_request.suffix_data)?,
-            base64::STANDARD_NO_PAD,
-        );
-        let delta_base64 = &encode_config(
-            serde_json::to_string(&create_result.operation_request.delta)?,
-            base64::STANDARD_NO_PAD,
-        );
+        // let create_result: DIDCreateResult = serde_json::from_str(&json)?;
+        // let suffix_data_base64 = &encode_config(
+        //     serde_json::to_string(&create_result.operation_request.suffix_data)?,
+        //     base64::STANDARD_NO_PAD,
+        // );
+        // let delta_base64 = &encode_config(
+        //     serde_json::to_string(&create_result.operation_request.delta)?,
+        //     base64::STANDARD_NO_PAD,
+        // );
 
-        println!("\nsuffix {} \n delta {}", suffix_data_base64, delta_base64);
+        // println!("\nsuffix {} \n delta {}", suffix_data_base64, delta_base64);
 
-        let mut map = HashMap::new();
-        map.insert("type", "create");
-        map.insert("suffix_data", suffix_data_base64);
-        map.insert("delta", delta_base64);
+        // let mut map = HashMap::new();
+        // map.insert("type", "create");
+        // map.insert("suffix_data", suffix_data_base64);
+        // map.insert("delta", delta_base64);
 
-        let client = reqwest::Client::new();
-        let res = client.post(api_url).json(&map).send().await?.text().await?;
+        // let client = reqwest::Client::new();
+        // let res = client.post(api_url).json(&map).send().await?.text().await?;
 
-        println!("side tree api response: {}", &res);
+        // println!("side tree api response: {}", &res);
 
-        Ok(VadePluginResultValue::Success(Some(res)))
+        Ok(VadePluginResultValue::Success(Some("".to_string())))
     }
 
     // /// Updates data related to a DID. Two updates are supported depending on the value of
