@@ -4,19 +4,19 @@ use serde::{ser::SerializeMap, Serialize};
 extern crate bitflags;
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct Delta {
-    patches: Vec<Patch>,
-    update_commitment: String,
+    pub patches: Vec<Patch>,
+    pub update_commitment: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct SuffixData {
-    #[serde(rename = "deltaHash")]
-    delta_hash: String,
-    #[serde(rename = "recoveryCommitment")]
-    recovery_commitment: String,
+    pub delta_hash: String,
+    pub recovery_commitment: String,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    data_type: Option<String>,
+    pub data_type: Option<String>,
 }
 
 #[derive(Debug, Clone)]

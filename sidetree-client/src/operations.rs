@@ -13,6 +13,7 @@ pub enum Operation {
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationInput {
     public_keys: Option<Vec<PublicKey>>,
     services: Option<Vec<Service>>,
@@ -46,6 +47,7 @@ impl OperationInput {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
     operation_request: Operation,
     did_suffix: String,
@@ -64,7 +66,7 @@ impl Serialize for Operation {
         match self {
             Operation::Create(suffix_data, delta) => {
                 map.serialize_entry("type", "create")?;
-                map.serialize_entry("suffixData", suffix_data)?;
+                map.serialize_entry("suffix_data", suffix_data)?;
                 map.serialize_entry("delta", delta)?;
             }
         }

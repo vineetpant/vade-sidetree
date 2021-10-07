@@ -6,25 +6,27 @@ use crate::{
 use serde::{ser::SerializeSeq, Serialize};
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct Document {
-    #[serde(rename = "publicKeys")]
     pub public_keys: Vec<PublicKey>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub services: Vec<Service>,
 }
 
 #[derive(Debug, Serialize, Clone, Default)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct PublicKey {
     pub id: String,
     #[serde(rename = "type")]
     pub key_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub purposes: Option<Purpose>,
-    #[serde(rename = "publicKeyJwk", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub jwk: Option<JsonWebKey>,
 }
 
 #[derive(Debug, Serialize, Clone, Default)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct JsonWebKey {
     #[serde(rename = "kty")]
     pub key_type: String,
@@ -37,6 +39,7 @@ pub struct JsonWebKey {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct Service {
     pub id: String,
     #[serde(rename = "type")]
@@ -63,19 +66,19 @@ impl Serialize for Purpose {
         let mut seq = serializer.serialize_seq(None)?;
 
         if self.contains(Purpose::ASSERTION_METHOD) {
-            seq.serialize_element("assertionMethod")?;
+            seq.serialize_element("assertion")?;
         }
         if self.contains(Purpose::AUTHENTICATION) {
-            seq.serialize_element("authentication")?;
+            seq.serialize_element("auth")?;
         }
         if self.contains(Purpose::CAPABILITY_DELEGATION) {
-            seq.serialize_element("capabilityDelegation")?;
+            seq.serialize_element("delegation")?;
         }
         if self.contains(Purpose::CAPABILITY_INVOCATION) {
-            seq.serialize_element("capabilityInvocation")?;
+            seq.serialize_element("invocation")?;
         }
         if self.contains(Purpose::KEY_AGREEMENT) {
-            seq.serialize_element("keyAgreement")?;
+            seq.serialize_element("agreement")?;
         }
 
         seq.end()
