@@ -1,3 +1,4 @@
+use crate::multihash::hash_then_encode;
 use crate::Error;
 use crate::{
     did::*,
@@ -77,7 +78,8 @@ impl Serialize for Operation {
 
 pub fn create<'a>() -> Result<OperationOutput, Error<'a>> {
     let signing_key = KeyPair::random();
-    let signing_key_public = signing_key.to_public_key("key-1".into(), Some([Purpose::Agreement].to_vec()));
+    let signing_key_public =
+        signing_key.to_public_key("key-1".into(), Some([Purpose::Agreement].to_vec()));
 
     create_config(OperationInput::new().with_public_keys(vec![signing_key_public]))
 }
@@ -101,18 +103,29 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
     update_key_public.d = None;
 
     let delta = Delta {
-        update_commitment: canonicalize_then_double_hash_then_encode(&update_key_public).unwrap(),
+        update_commitment: canonicalize_then_hash_then_encode(
+            &update_key_public,
+            crate::multihash::HashAlgorithm::Sha256,
+        ),
         patches,
     };
 
-    let delta_hash = canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
+    let delta_hash = hash_then_encode(
+        serde_json::to_string(&delta)
+            .map_err(|_| Error::MissingField("Failed to canonicalize"))?
+            .as_bytes(),
+        crate::multihash::HashAlgorithm::Sha256,
+    );
 
     let mut recovery_key_public: JsonWebKey = (&recovery_key).into();
     recovery_key_public.d = None;
 
     let suffix_data = SuffixData {
         delta_hash,
-        recovery_commitment: canonicalize_then_double_hash_then_encode(&recovery_key_public).unwrap(),
+        recovery_commitment: canonicalize_then_hash_then_encode(
+            &recovery_key_public,
+            crate::multihash::HashAlgorithm::Sha256,
+        ),
         data_type: None,
     };
 
