@@ -15,10 +15,10 @@ pub enum Operation {
 #[derive(Serialize, Debug, Clone, Default)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationInput {
-    public_keys: Option<Vec<PublicKey>>,
-    services: Option<Vec<Service>>,
-    update_key: Option<JsonWebKey>,
-    recovery_key: Option<JsonWebKey>,
+    pub public_keys: Option<Vec<PublicKey>>,
+    pub services: Option<Vec<Service>>,
+    pub update_key: Option<JsonWebKey>,
+    pub recovery_key: Option<JsonWebKey>,
 }
 
 impl OperationInput {
@@ -49,11 +49,11 @@ impl OperationInput {
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
-    operation_request: Operation,
-    did_suffix: String,
-    update_key: JsonWebKey,
-    recovery_key: JsonWebKey,
-    public_keys: Vec<PublicKey>,
+    pub operation_request: Operation,
+    pub did_suffix: String,
+    pub update_key: JsonWebKey,
+    pub recovery_key: JsonWebKey,
+    pub public_keys: Vec<PublicKey>,
 }
 
 impl Serialize for Operation {
@@ -77,7 +77,7 @@ impl Serialize for Operation {
 
 pub fn create<'a>() -> Result<OperationOutput, Error<'a>> {
     let signing_key = KeyPair::random();
-    let signing_key_public = signing_key.to_public_key("key-1".into(), Some(Purpose::all()));
+    let signing_key_public = signing_key.to_public_key("key-1".into(), Some([Purpose::Agreement].to_vec()));
 
     create_config(OperationInput::new().with_public_keys(vec![signing_key_public]))
 }
@@ -92,7 +92,7 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
 
     let document = Document {
         public_keys: config.public_keys.clone().unwrap(),
-        services: vec![],
+        services: None,
     };
 
     let patches = vec![Patch::Replace(document)];

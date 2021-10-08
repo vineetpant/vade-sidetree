@@ -1,16 +1,16 @@
 use did::{Document, PublicKey, Service};
-use serde::{ser::SerializeMap, Serialize};
+use serde::{Serialize, Deserialize};
 #[macro_use]
 extern crate bitflags;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct Delta {
     pub patches: Vec<Patch>,
     pub update_commitment: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct SuffixData {
     pub delta_hash: String,
@@ -19,7 +19,9 @@ pub struct SuffixData {
     pub data_type: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "action")]
+#[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
 pub enum Patch {
     AddPublicKeys(Vec<PublicKey>),
     RemovePublicKeys(Vec<String>),
@@ -27,32 +29,6 @@ pub enum Patch {
     RemoveServices(Vec<String>),
     Replace(Document),
     IetfJsonPatch,
-}
-
-impl Serialize for Patch {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut map = serializer.serialize_map(None)?;
-
-        match self {
-            Patch::AddPublicKeys(public_keys) => {
-                map.serialize_entry("action", "add-public-keys")?;
-                map.serialize_entry("publicKeys", public_keys)?;
-            }
-            Patch::RemovePublicKeys(_) => {}
-            Patch::AddServices(_) => {}
-            Patch::RemoveServices(_) => {}
-            Patch::Replace(document) => {
-                map.serialize_entry("action", "replace")?;
-                map.serialize_entry("document", document)?;
-            }
-            Patch::IetfJsonPatch => {}
-        }
-
-        map.end()
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

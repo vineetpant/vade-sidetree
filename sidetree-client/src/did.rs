@@ -3,29 +3,29 @@ use crate::{
     multihash::{canonicalize, hash, HashAlgorithm},
     SuffixData,
 };
-use serde::{ser::SerializeSeq, Serialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct Document {
     pub public_keys: Vec<PublicKey>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub services: Vec<Service>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub services: Option<Vec<Service>>,
 }
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct PublicKey {
     pub id: String,
     #[serde(rename = "type")]
     pub key_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub purposes: Option<Purpose>,
+    pub purposes: Option<Vec<Purpose>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwk: Option<JsonWebKey>,
 }
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct JsonWebKey {
     #[serde(rename = "kty")]
@@ -38,7 +38,7 @@ pub struct JsonWebKey {
     pub d: Option<String>,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct Service {
     pub id: String,
@@ -48,41 +48,14 @@ pub struct Service {
     pub service_endpoint: String,
 }
 
-bitflags! {
-    pub struct Purpose: u8 {
-        const AUTHENTICATION = 0b00001;
-        const ASSERTION_METHOD = 0b00010;
-        const CAPABILITY_INVOCATION = 0b00100;
-        const CAPABILITY_DELEGATION = 0b01000;
-        const KEY_AGREEMENT = 0b10000;
-    }
-}
-
-impl Serialize for Purpose {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut seq = serializer.serialize_seq(None)?;
-
-        if self.contains(Purpose::ASSERTION_METHOD) {
-            seq.serialize_element("assertion")?;
-        }
-        if self.contains(Purpose::AUTHENTICATION) {
-            seq.serialize_element("auth")?;
-        }
-        if self.contains(Purpose::CAPABILITY_DELEGATION) {
-            seq.serialize_element("delegation")?;
-        }
-        if self.contains(Purpose::CAPABILITY_INVOCATION) {
-            seq.serialize_element("invocation")?;
-        }
-        if self.contains(Purpose::KEY_AGREEMENT) {
-            seq.serialize_element("agreement")?;
-        }
-
-        seq.end()
-    }
+#[derive(Debug, Serialize, Deserialize, Clone, )]
+#[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
+pub enum Purpose {
+    Auth,
+    Assertion,
+    Invocation,
+    Delegation,
+    Agreement,
 }
 
 pub(crate) fn compute_unique_suffix(suffix_data: &SuffixData) -> String {

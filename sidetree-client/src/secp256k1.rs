@@ -27,7 +27,7 @@ impl KeyPair {
         )
     }
 
-    pub fn to_public_key(&self, id: String, purposes: Option<Purpose>) -> crate::PublicKey {
+    pub fn to_public_key(&self, id: String, purposes: Option<Vec<Purpose>>) -> crate::PublicKey {
         let mut jwk: JsonWebKey = self.into();
         jwk.d = None;
 
