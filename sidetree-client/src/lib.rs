@@ -20,7 +20,7 @@ pub struct SuffixData {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "action")]
+#[serde(tag = "action", content = "public_keys")]
 #[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
 pub enum Patch {
     AddPublicKeys(Vec<PublicKey>),

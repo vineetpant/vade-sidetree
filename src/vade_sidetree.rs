@@ -156,9 +156,9 @@ impl VadePlugin for VadeSidetree {
 
 #[cfg(test)]
 mod tests {
-    use sidetree_client::did::Purpose;
-    use crate::helper::createSignedJWS;
     use super::*;
+    use crate::helper::createSignedJWS;
+    use sidetree_client::did::{JsonWebKey, Purpose};
     use std::sync::Once;
 
     static INIT: Once = Once::new();
@@ -208,27 +208,43 @@ mod tests {
     #[tokio::test]
     async fn can_update_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let create_operation = operations::create().unwrap();
-        let json = serde_json::to_string(&create_operation)?;
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
-        let create_result: DIDCreateResult = serde_json::from_str(&json)?;
-        let delta = create_result.operation_request.delta;
+        let patch: Patch = Patch::AddPublicKeys(vec![update_key.clone()]);
+
+        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+
+        let delta = Delta {
+            patches: vec![patch],
+            update_commitment,
+        };
+        let serialized_delta = serde_json::to_string(&delta)?;
+        println!("serialized delta {}",serialized_delta);
+        // let create_operation = operations::create().unwrap();
+        // let json = serde_json::to_string(&create_operation)?;
+
+        // let create_result: DIDCreateResult = serde_json::from_str(&json)?;
+        // let delta = create_result.operation_request.delta;
 
         let delta_hash = multihash::hash_then_encode(
             serde_json::to_string(&delta)?.as_bytes(),
             multihash::HashAlgorithm::Sha256,
         );
-        let key_pair = secp256k1::KeyPair::random();
+
+        // let update_key = jwk;
         let signed_data_payload = SignedDataPayload {
-            update_key: key_pair
-                .to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec())),
+            update_key: update_key.jwk.unwrap(),
             delta_hash,
         };
 
-        let signed_data = createSignedJWS(signed_data_payload,key_pair)?;
+        let signed_data = createSignedJWS(signed_data_payload, key_pair)?;
 
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-        let result = did_handler.did_update("did:evan", &signed_data, &serde_json::to_string(&delta)?).await;
+        let result = did_handler
+            .did_update("did:evan", &signed_data, &serde_json::to_string(&delta)?)
+            .await;
 
         let respone = match result.as_ref() {
             Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),

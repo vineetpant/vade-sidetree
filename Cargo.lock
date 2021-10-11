@@ -1854,6 +1854,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sha2 0.9.8",
  "sidetree-client",
  "tokio",
  "vade",

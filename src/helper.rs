@@ -1,4 +1,5 @@
 use crate::datatypes::SignedDataPayload;
+use sha2::{Digest, Sha256};
 use sidetree_client::secp256k1;
 
 pub fn createSignedJWS(
@@ -16,8 +17,18 @@ pub fn createSignedJWS(
         serde_json::to_string(&signed_data_payload).unwrap(),
         base64::URL_SAFE_NO_PAD,
     ));
-    let (signed_data, _) = update_keypair.sign(message.as_bytes());
+
+    let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(message.clone());
+
+    // read hash digest and consume hasher
+    let message_hash = hasher.finalize();
+
+    let (signed_data, _) = update_keypair.sign(message_hash.as_slice());
+
     message.push_str(".");
+
     base64::encode_config_buf(
         signed_data.serialize(),
         base64::URL_SAFE_NO_PAD,
