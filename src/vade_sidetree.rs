@@ -89,32 +89,44 @@ impl VadePlugin for VadeSidetree {
         let client = reqwest::Client::new();
         let res = client.post(api_url).json(&map).send().await?.text().await?;
 
-        println!("side tree api response: {}", &res);
-
-        Ok(VadePluginResultValue::Success(Some("".to_string())))
+        Ok(VadePluginResultValue::Success(Some(res)))
     }
 
-    // /// Updates data related to a DID. Two updates are supported depending on the value of
-    // /// `options.operation`.
-    // ///
-    // /// # Arguments
-    // ///
-    // /// * `did` - DID to update data for
-    // /// * `options` - serialized [`DidUpdateArguments`](https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.DidUpdateArguments.html)
-    // /// * `payload` - DID document to set or empty
-    // ///
-    // async fn did_update(
-    //     &mut self,
-    //     did: &str,
-    //     options: &str,
-    //     payload: &str,
-    // ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
-    //     if !did.starts_with(EVAN_METHOD_PREFIX) {
-    //         return Ok(VadePluginResultValue::Ignored);
-    //     }
+    /// Updates data related to a DID. Two updates are supported depending on the value of
+    /// `options.operation`.
+    ///
+    /// # Arguments
+    ///
+    /// * `did` - DID to update data for
+    /// * `options` - serialized SignedData object
+    /// * `payload` - serialized Delta object
+    ///
+    async fn did_update(
+        &mut self,
+        did: &str,
+        options: &str,
+        payload: &str,
+    ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
+        if !did.starts_with(EVAN_METHOD) {
+            return Ok(VadePluginResultValue::Ignored);
+        }
 
-    //     Ok(VadePluginResultValue::Success)
-    // }
+        let mut api_url = self.config.sidetree_rest_api_url.clone();
+        api_url.push_str("operations");
+
+        let delta_base64 = &encode_config(payload, base64::STANDARD_NO_PAD);
+
+        let mut map = HashMap::new();
+        map.insert("type", "update");
+        map.insert("did_suffix", did);
+        map.insert("delta", delta_base64);
+        map.insert("signed_data", options);
+
+        let client = reqwest::Client::new();
+        let res = client.post(api_url).json(&map).send().await?.text().await?;
+
+        Ok(VadePluginResultValue::Success(Some(res)))
+    }
 
     /// Fetch data about a DID, which returns this DID's DID document.
     ///
@@ -144,6 +156,8 @@ impl VadePlugin for VadeSidetree {
 
 #[cfg(test)]
 mod tests {
+    use sidetree_client::did::Purpose;
+    use crate::helper::createSignedJWS;
     use super::*;
     use std::sync::Once;
 
@@ -158,8 +172,8 @@ mod tests {
     #[tokio::test]
     async fn can_create_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut resolver = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-        let result = resolver.did_create("did:evan", "{}", "{}").await;
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler.did_create("did:evan", "{}", "{}").await;
 
         let respone = match result.as_ref() {
             Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
@@ -175,8 +189,8 @@ mod tests {
     #[tokio::test]
     async fn can_resolve_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut resolver = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-        let result = resolver
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
             .did_resolve("did:evan:EiAj02etrKPkHMpKJ6Gr5m0IzWz6izFbTfV_moGDH2z8sA")
             .await;
 
@@ -186,6 +200,42 @@ mod tests {
             Err(e) => e.to_string(),
         };
         println!("did resolve result: {}", &respone);
+
+        assert_eq!(result.is_ok(), true);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_did() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+        let create_operation = operations::create().unwrap();
+        let json = serde_json::to_string(&create_operation)?;
+
+        let create_result: DIDCreateResult = serde_json::from_str(&json)?;
+        let delta = create_result.operation_request.delta;
+
+        let delta_hash = multihash::hash_then_encode(
+            serde_json::to_string(&delta)?.as_bytes(),
+            multihash::HashAlgorithm::Sha256,
+        );
+        let key_pair = secp256k1::KeyPair::random();
+        let signed_data_payload = SignedDataPayload {
+            update_key: key_pair
+                .to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec())),
+            delta_hash,
+        };
+
+        let signed_data = createSignedJWS(signed_data_payload,key_pair)?;
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler.did_update("did:evan", &signed_data, &serde_json::to_string(&delta)?).await;
+
+        let respone = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+        println!("did create result: {}", &respone);
 
         assert_eq!(result.is_ok(), true);
         Ok(())

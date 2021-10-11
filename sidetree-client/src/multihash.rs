@@ -27,26 +27,26 @@ pub fn canonicalize_then_double_hash_then_encode<T: Serialize + ?Sized>(value: &
     return Ok(multihash_encoded_string);
 }
 
-pub(crate) fn hash(buffer: &[u8], algorithm: HashAlgorithm) -> Vec<u8> {
+pub fn hash(buffer: &[u8], algorithm: HashAlgorithm) -> Vec<u8> {
     match algorithm {
         HashAlgorithm::Sha256 => Code::Sha2_256.digest(buffer).to_bytes(),
         HashAlgorithm::Sha3_256 => Code::Sha3_256.digest(buffer).to_bytes(),
     }
 }
 
-pub(crate) fn hash_as_non_multihash_buffer(buffer: &[u8], algorithm: HashAlgorithm) -> Vec<u8> {
+pub fn hash_as_non_multihash_buffer(buffer: &[u8], algorithm: HashAlgorithm) -> Vec<u8> {
     match algorithm {
         HashAlgorithm::Sha256 => Sha256::digest(buffer).to_vec(),
         HashAlgorithm::Sha3_256 => todo!(),
     }
 }
 
-pub(crate) fn hash_then_encode(buffer: &[u8], algorithm: HashAlgorithm) -> String {
+pub fn hash_then_encode(buffer: &[u8], algorithm: HashAlgorithm) -> String {
     let multihash_buffer = hash(buffer, algorithm);
     return encoder::encode(multihash_buffer);
 }
 
-pub(crate) enum HashAlgorithm {
+pub enum HashAlgorithm {
     Sha256,
     #[allow(dead_code)]
     Sha3_256,

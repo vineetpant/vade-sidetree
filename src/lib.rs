@@ -40,4 +40,5 @@
 #[macro_use]
 mod datatypes;
 mod vade_sidetree;
+mod helper;
 pub use self::vade_sidetree::*;

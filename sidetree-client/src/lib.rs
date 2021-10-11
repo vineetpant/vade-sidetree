@@ -37,8 +37,8 @@ pub enum Error<'a> {
     SerializationError,
 }
 
-mod did;
+pub mod did;
 mod encoder;
-mod multihash;
+pub mod multihash;
 pub mod operations;
 pub mod secp256k1;

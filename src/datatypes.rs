@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sidetree_client::{Delta,SuffixData};
+use sidetree_client::{Delta, SuffixData, did::PublicKey};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
@@ -15,6 +15,12 @@ pub struct DIDCreateResult {
     pub did_suffix: String,
     pub update_key: serde_json::Value,
     pub recovery_key: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SignedDataPayload{
+    pub update_key: PublicKey,
+    pub delta_hash: String,
 }
 
 pub struct SideTreeConfig {
