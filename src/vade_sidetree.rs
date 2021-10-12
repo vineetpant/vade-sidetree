@@ -102,7 +102,7 @@ impl VadePlugin for VadeSidetree {
         let client = reqwest::Client::new();
         let res = client.post(api_url).json(&map).send().await?.text().await?;
 
-        Ok(VadePluginResultValue::Success(Some(json)))
+        Ok(VadePluginResultValue::Success(Some(res)))
     }
 
     /// Updates data related to a DID. Two updates are supported depending on the value of
@@ -117,7 +117,7 @@ impl VadePlugin for VadeSidetree {
     async fn did_update(
         &mut self,
         did: &str,
-        options: &str,
+        _options: &str,
         payload: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
         if !did.starts_with(EVAN_METHOD) {
@@ -153,9 +153,8 @@ impl VadePlugin for VadeSidetree {
             map.insert("delta", delta_base64);
 
             let client = reqwest::Client::new();
-            println!("side tree api body: {}", &serde_json::to_string(&map)?);
             let res = client.post(api_url).json(&map).send().await?.text().await?;
-            println!("side tree api response: {}", &res);
+            println!("did update res {}",res);
             return Ok(VadePluginResultValue::Success(Some(res)));
         }
         Ok(VadePluginResultValue::Success(Some("".to_string())))
@@ -178,7 +177,6 @@ impl VadePlugin for VadeSidetree {
         api_url.push_str("identifiers/");
         api_url.push_str(did_id);
 
-        println!("url: {} ", &api_url);
 
         let client = reqwest::Client::new();
         let res = client.get(api_url).send().await?.text().await?;
@@ -190,11 +188,9 @@ impl VadePlugin for VadeSidetree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helper::createSignedJWS;
     use sidetree_client::{
-        did::{JsonWebKey, Purpose},
+        did::{Purpose},
         multihash,
-        operations::OperationOutput,
     };
     use std::sync::Once;
 
@@ -228,7 +224,7 @@ mod tests {
         enable_logging();
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         let result = did_handler
-            .did_resolve("did:evan:EiAj02etrKPkHMpKJ6Gr5m0IzWz6izFbTfV_moGDH2z8sA")
+            .did_resolve("did:evan:EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ")
             .await;
 
         let respone = match result.as_ref() {
@@ -246,24 +242,17 @@ mod tests {
     async fn can_update_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-        let result = did_handler.did_create("did:evan", "{}", "{}").await;
-
-        let respone = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
-        };
-        println!("did create result: {}", &respone);
-        let create_response: DIDCreateResult = serde_json::from_str(&respone)?;
+        let create_operation = operations::create().unwrap();
+        let json = serde_json::to_string(&create_operation)?;
+        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
 
         let key_pair = secp256k1::KeyPair::random();
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
-        let patch: Patch = Patch::AddPublicKeys(sidetree_client::AddPublicKeys {
-            public_keys: vec![update_key.clone()],
-        });
+        // let patch: Patch = Patch::AddPublicKeys(sidetree_client::AddPublicKeys {
+        //     public_keys: vec![update_key.clone()],
+        // });
 
         let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
 
@@ -275,7 +264,7 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         let result = did_handler
             .did_update(
-                &format!("did:evan:{}", create_response.did_suffix),
+                &format!("did:evan:{}", "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"),
                 &"{}",
                 &serde_json::to_string(&update_payload)?,
             )
@@ -286,7 +275,7 @@ mod tests {
             Ok(_) => "Unknown Result".to_string(),
             Err(e) => e.to_string(),
         };
-        println!("did create result: {}", &respone);
+        println!("did update result: {}", &respone);
 
         assert_eq!(result.is_ok(), true);
         Ok(())

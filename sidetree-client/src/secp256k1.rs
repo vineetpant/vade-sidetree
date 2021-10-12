@@ -1,12 +1,8 @@
-use std::convert::TryInto;
-
-use base64::DecodeError;
 use secp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 
 use crate::{
     did::{JsonWebKey, Purpose},
-    encoder::{decode, encode},
-    Error,
+    encoder::encode,
 };
 
 #[derive(Debug, Clone)]

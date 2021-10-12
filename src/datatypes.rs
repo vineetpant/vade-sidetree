@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sidetree_client::{
-    did::{JsonWebKey, PublicKey},
+    did::{JsonWebKey},
     Delta, SuffixData,
 };
 

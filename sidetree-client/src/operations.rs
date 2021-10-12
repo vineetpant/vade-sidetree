@@ -1,19 +1,12 @@
-use std::convert::TryInto;
-
 use crate::encoder::decode;
 use crate::multihash::hash_then_encode;
 use crate::{
-    did::*,
-    multihash::{canonicalize_then_double_hash_then_encode, canonicalize_then_hash_then_encode},
-    secp256k1::KeyPair,
-    Delta, Patch, SuffixData,
+    did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
+    SuffixData,
 };
 use crate::{Error, ReplaceDocument, SignedUpdateDataPayload};
-use base64::encode;
-use josekit::jws::JwsHeader;
-use josekit::jwt::JwtPayload;
-use secp256k1::{recover, SecretKey};
-use serde::{ser::SerializeMap, Deserialize, Serialize};
+use secp256k1::SecretKey;
+use serde::{ser::SerializeMap, Serialize};
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
@@ -300,7 +293,7 @@ mod test {
     fn generate_create_operation_with_input() {
         let putblic_key = PublicKey {
             id: "key-1".into(),
-            purposes: Some(Purpose::AUTHENTICATION | Purpose::CAPABILITY_DELEGATION),
+            purpose: Some(Purpose::AUTHENTICATION | Purpose::CAPABILITY_DELEGATION),
             key_type: "SampleVerificationKey2020".into(),
             jwk: None,
         };

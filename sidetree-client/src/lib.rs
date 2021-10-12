@@ -1,7 +1,5 @@
 use did::{Document, JsonWebKey, PublicKey, Service};
 use serde::{Deserialize, Serialize};
-#[macro_use]
-extern crate bitflags;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
