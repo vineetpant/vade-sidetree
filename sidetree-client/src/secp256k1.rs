@@ -1,14 +1,18 @@
+use std::convert::TryInto;
+
+use base64::DecodeError;
 use secp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 
 use crate::{
     did::{JsonWebKey, Purpose},
-    encoder::encode,
+    encoder::{decode, encode},
+    Error,
 };
 
 #[derive(Debug, Clone)]
 pub struct KeyPair {
-    public_key: PublicKey,
-    secret_key: Option<SecretKey>,
+    pub public_key: PublicKey,
+    pub secret_key: Option<SecretKey>,
 }
 
 impl KeyPair {
@@ -27,14 +31,14 @@ impl KeyPair {
         )
     }
 
-    pub fn to_public_key(&self, id: String, purposes: Option<Vec<Purpose>>) -> crate::PublicKey {
+    pub fn to_public_key(&self, id: String, purpose: Option<Vec<Purpose>>) -> crate::PublicKey {
         let mut jwk: JsonWebKey = self.into();
         jwk.d = None;
 
         crate::PublicKey {
             id,
             key_type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-            purposes,
+            purpose,
             jwk: Some(jwk),
         }
     }

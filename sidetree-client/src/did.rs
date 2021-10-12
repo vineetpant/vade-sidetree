@@ -20,7 +20,7 @@ pub struct PublicKey {
     #[serde(rename = "type")]
     pub key_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub purposes: Option<Vec<Purpose>>,
+    pub purpose: Option<Vec<Purpose>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwk: Option<JsonWebKey>,
 }
@@ -48,7 +48,7 @@ pub struct Service {
     pub service_endpoint: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, )]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
 pub enum Purpose {
     Auth,

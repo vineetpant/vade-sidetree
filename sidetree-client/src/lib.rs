@@ -1,5 +1,5 @@
-use did::{Document, PublicKey, Service};
-use serde::{Serialize, Deserialize};
+use did::{Document, JsonWebKey, PublicKey, Service};
+use serde::{Deserialize, Serialize};
 #[macro_use]
 extern crate bitflags;
 
@@ -20,14 +20,46 @@ pub struct SuffixData {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "action", content = "public_keys")]
-#[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
+#[serde(rename_all(serialize = "snake_case"))]
+pub struct SignedUpdateDataPayload {
+    pub delta_hash: String,
+    pub update_key: JsonWebKey,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemovePublicKeys {
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddPublicKeys {
+    pub public_keys: Vec<PublicKey>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RemoveServices {
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddServices {
+    pub services: Vec<Service>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReplaceDocument {
+    pub document: Document,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "action")]
+#[serde(rename_all(serialize = "kebab-case", deserialize = "kebab-case"))]
 pub enum Patch {
-    AddPublicKeys(Vec<PublicKey>),
-    RemovePublicKeys(Vec<String>),
-    AddServices(Vec<Service>),
-    RemoveServices(Vec<String>),
-    Replace(Document),
+    AddPublicKeys(AddPublicKeys),
+    RemovePublicKeys(RemovePublicKeys),
+    AddServices(AddServices),
+    RemoveServices(RemoveServices),
+    Replace(ReplaceDocument),
     IetfJsonPatch,
 }
 

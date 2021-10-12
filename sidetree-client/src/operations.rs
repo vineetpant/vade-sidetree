@@ -1,16 +1,25 @@
+use std::convert::TryInto;
+
+use crate::encoder::decode;
 use crate::multihash::hash_then_encode;
-use crate::Error;
 use crate::{
     did::*,
     multihash::{canonicalize_then_double_hash_then_encode, canonicalize_then_hash_then_encode},
     secp256k1::KeyPair,
     Delta, Patch, SuffixData,
 };
-use serde::{ser::SerializeMap, Serialize};
+use crate::{Error, ReplaceDocument, SignedUpdateDataPayload};
+use base64::encode;
+use josekit::jws::JwsHeader;
+use josekit::jwt::JwtPayload;
+use secp256k1::{recover, SecretKey};
+use serde::{ser::SerializeMap, Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub enum Operation {
     Create(SuffixData, Delta),
+    Update(String, Delta, String),
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -47,6 +56,40 @@ impl OperationInput {
     }
 }
 
+#[derive(Serialize, Debug, Clone, Default)]
+#[serde(rename_all(serialize = "snake_case"))]
+pub struct UpdateOperationInput {
+    pub did_suffix: String,
+    pub patches: Vec<Patch>,
+    pub update_key: JsonWebKey,
+    pub update_commitment: String,
+}
+
+impl UpdateOperationInput {
+    pub fn new() -> Self {
+        UpdateOperationInput::default()
+    }
+    pub fn with_did_suffix(mut self, did_suffix: String) -> Self {
+        self.did_suffix = did_suffix;
+        self
+    }
+
+    pub fn with_patches(mut self, patches: Vec<Patch>) -> Self {
+        self.patches = patches;
+        self
+    }
+
+    pub fn with_update_key(mut self, update_key: JsonWebKey) -> Self {
+        self.update_key = update_key;
+        self
+    }
+
+    pub fn with_update_commitment(mut self, update_commitment: String) -> Self {
+        self.update_commitment = update_commitment;
+        self
+    }
+}
+
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
@@ -55,6 +98,12 @@ pub struct OperationOutput {
     pub update_key: JsonWebKey,
     pub recovery_key: JsonWebKey,
     pub public_keys: Vec<PublicKey>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
+pub struct UpdateOperationOutput {
+    pub operation_request: Operation,
 }
 
 impl Serialize for Operation {
@@ -69,6 +118,12 @@ impl Serialize for Operation {
                 map.serialize_entry("type", "create")?;
                 map.serialize_entry("suffix_data", suffix_data)?;
                 map.serialize_entry("delta", delta)?;
+            }
+            Operation::Update(did_suffix, delta, signed_data) => {
+                map.serialize_entry("type", "update")?;
+                map.serialize_entry("did_suffix", did_suffix)?;
+                map.serialize_entry("delta", delta)?;
+                map.serialize_entry("signed_data", signed_data)?;
             }
         }
 
@@ -97,7 +152,7 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
         services: None,
     };
 
-    let patches = vec![Patch::Replace(document)];
+    let patches = vec![Patch::Replace(ReplaceDocument { document })];
 
     let mut update_key_public: JsonWebKey = (&update_key).into();
     update_key_public.d = None;
@@ -138,6 +193,87 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
         public_keys: config.public_keys.unwrap(),
         operation_request: operation,
         did_suffix,
+    })
+}
+
+pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
+    let mut public_key_x = decode(config.update_key.x).unwrap();
+    let mut public_key_y = decode(config.update_key.y).unwrap();
+    let mut full_pub_key = Vec::<u8>::new();
+    full_pub_key.append(&mut vec![0x04]);
+    full_pub_key.append(&mut public_key_x);
+    full_pub_key.append(&mut public_key_y);
+    let mut public_key_arr: [u8; 65] = [0; 65];
+    public_key_arr.copy_from_slice(&full_pub_key[0..65]);
+    let mut secret_key = None;
+    if let Some(d) = config.update_key.d {
+        let secret_key_decoded = decode(d).unwrap();
+        let mut secret_key_arr: [u8; 32] = Default::default();
+        secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
+        secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
+    }
+    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+
+    let update_keypair = KeyPair {
+        public_key,
+        secret_key,
+    };
+
+    let mut update_key_public: JsonWebKey = (&update_keypair).into();
+    update_key_public.d = None;
+
+    let delta = Delta {
+        update_commitment: canonicalize_then_hash_then_encode(
+            &config.patches,
+            crate::multihash::HashAlgorithm::Sha256,
+        ),
+        patches: config.patches,
+    };
+
+    let delta_hash = hash_then_encode(
+        serde_json::to_string(&delta)
+            .map_err(|_| Error::MissingField("Failed to canonicalize"))?
+            .as_bytes(),
+        crate::multihash::HashAlgorithm::Sha256,
+    );
+
+    let signed_data_payload = SignedUpdateDataPayload {
+        update_key: update_key_public,
+        delta_hash,
+    };
+
+    let protected_header = "{\"alg\":\"ES256K\"}";
+    let mut message = String::new();
+    message.push_str(&base64::encode_config(
+        protected_header,
+        base64::URL_SAFE_NO_PAD,
+    ));
+    message.push_str(".");
+    message.push_str(&base64::encode_config(
+        serde_json::to_string(&signed_data_payload).unwrap(),
+        base64::URL_SAFE_NO_PAD,
+    ));
+
+    let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(message.clone());
+
+    // read hash digest and consume hasher
+    let message_hash = hasher.finalize();
+
+    let (signed_data, _) = update_keypair.sign(message_hash.as_slice());
+
+    message.push_str(".");
+    base64::encode_config_buf(
+        signed_data.serialize(),
+        base64::URL_SAFE_NO_PAD,
+        &mut message,
+    );
+
+    let operation = Operation::Update(config.did_suffix, delta, message);
+
+    Ok(UpdateOperationOutput {
+        operation_request: operation,
     })
 }
 
