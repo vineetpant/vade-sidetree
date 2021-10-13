@@ -1,5 +1,6 @@
 use did::{Document, JsonWebKey, PublicKey, Service};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
@@ -67,6 +68,11 @@ pub enum Error<'a> {
     SerializationError,
 }
 
+impl fmt::Display for Error<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 pub mod did;
 mod encoder;
 pub mod multihash;
