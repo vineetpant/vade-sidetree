@@ -2,7 +2,8 @@ image: rust:latest
 
 stages:
   - build
-  - test_unit
+# Disabling unit tests , please enable it when sidetree-node service docker is ready
+#  - test_unit
 
 before_script:
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@git.slock.it/".insteadOf 'ssh://git@git.slock.it/'

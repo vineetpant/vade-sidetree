@@ -147,6 +147,7 @@ impl VadePlugin for VadeSidetree {
             api_url.push_str("operations");
             let delta_base64 =
                 &encode_config(serde_json::to_string(&delta)?, base64::STANDARD_NO_PAD);
+            
             let mut map = HashMap::new();
             map.insert("type", "update");
             map.insert("signed_data", &signed);
