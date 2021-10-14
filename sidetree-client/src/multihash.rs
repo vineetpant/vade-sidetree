@@ -13,7 +13,7 @@ pub fn canonicalize<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>, String>
 pub(crate) fn canonicalize_then_hash_then_encode<T: Serialize + ?Sized>(value: &T, algorithm: HashAlgorithm) -> String {
     let canonicalized_string_buffer = canonicalize(value).unwrap();
 
-    return hash_then_encode(&canonicalized_string_buffer, algorithm);
+    hash_then_encode(&canonicalized_string_buffer, algorithm)
 }
 
 pub fn canonicalize_then_double_hash_then_encode<T: Serialize + ?Sized>(value: &T) -> Result<String, String> {
@@ -24,7 +24,7 @@ pub fn canonicalize_then_double_hash_then_encode<T: Serialize + ?Sized>(value: &
 
     let intermediate_hash_buffer = hash_as_non_multihash_buffer(content_buffer.as_slice(), HashAlgorithm::Sha256);
     let multihash_encoded_string = hash_then_encode(intermediate_hash_buffer.as_slice(), HashAlgorithm::Sha256);
-    return Ok(multihash_encoded_string);
+    Ok(multihash_encoded_string)
 }
 
 pub fn hash(buffer: &[u8], algorithm: HashAlgorithm) -> Vec<u8> {
@@ -43,7 +43,7 @@ pub fn hash_as_non_multihash_buffer(buffer: &[u8], algorithm: HashAlgorithm) -> 
 
 pub fn hash_then_encode(buffer: &[u8], algorithm: HashAlgorithm) -> String {
     let multihash_buffer = hash(buffer, algorithm);
-    return encoder::encode(multihash_buffer);
+    encoder::encode(multihash_buffer)
 }
 
 pub enum HashAlgorithm {

@@ -42,7 +42,7 @@ pub struct RemoveServices {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddServices {
-    pub services: Vec<Service>,
+    pub service_endpoints: Vec<Service>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,8 +56,8 @@ pub struct ReplaceDocument {
 pub enum Patch {
     AddPublicKeys(AddPublicKeys),
     RemovePublicKeys(RemovePublicKeys),
-    AddServices(AddServices),
-    RemoveServices(RemoveServices),
+    AddServiceEndpoints(AddServices),
+    RemoveServiceEndpoints(RemoveServices),
     Replace(ReplaceDocument),
     IetfJsonPatch,
 }

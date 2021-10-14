@@ -10,7 +10,7 @@
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
+  See the License for the specific language g id: todo!(), service_type: todo!(), service_endpoint: todo!()  id: todo!(), service_type: todo!(), service_endpoint: todo!()  id: todo!(), service_type: todo!(), service_endpoint: todo!() overning permissions and
   limitations under the License.
 */
 
@@ -21,10 +21,10 @@ use async_trait::async_trait;
 use base64::encode_config;
 use serde::{Deserialize, Serialize};
 use sidetree_client::{
-    did::{JsonWebKey, Purpose},
+    did::{JsonWebKey},
     operations::UpdateOperationInput,
     operations::{self, Operation},
-    secp256k1, Patch,
+    Patch,
 };
 use std::collections::HashMap;
 use std::error::Error;
@@ -43,6 +43,7 @@ pub struct VadeSidetree {
 struct DidUpdatePayload {
     pub update_key: JsonWebKey,
     pub update_commitment: String,
+    pub patches: Vec<Patch>,
 }
 
 impl VadeSidetree {
@@ -129,17 +130,9 @@ impl VadePlugin for VadeSidetree {
         }
 
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
-        let key_pair = secp256k1::KeyPair::random();
-        let update_key =
-            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
-
-        let patch: Patch = Patch::AddPublicKeys(sidetree_client::AddPublicKeys {
-            public_keys: vec![update_key.clone()],
-        });
-
         let operation = UpdateOperationInput::new()
             .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
-            .with_patches(vec![patch])
+            .with_patches(update_payload.patches)
             .with_update_key(update_payload.update_key)
             .with_update_commitment(update_payload.update_commitment);
 
@@ -194,7 +187,10 @@ impl VadePlugin for VadeSidetree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sidetree_client::{did::Purpose, multihash};
+    use sidetree_client::{
+        did::{Purpose, Service},
+        multihash,secp256k1,
+    };
     use std::sync::Once;
 
     static INIT: Once = Once::new();
@@ -242,7 +238,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn can_update_did() -> Result<(), Box<dyn std::error::Error>> {
+    async fn can_update_did_add_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
         let create_operation = operations::create();
@@ -257,11 +253,179 @@ mod tests {
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
+        let patch: Patch = Patch::AddPublicKeys(sidetree_client::AddPublicKeys {
+            public_keys: vec![update_key.clone()],
+        });
+
         let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
 
         let update_payload = DidUpdatePayload {
             update_key: create_response.update_key,
             update_commitment,
+            patches: vec![patch],
+        };
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
+            .did_update(
+                &format!(
+                    "did:evan:{}",
+                    "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
+                ),
+                &"{}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        let respone = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+        println!("did update result: {}", &respone);
+
+        assert_eq!(result.is_ok(), true);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+
+        let create_operation = operations::create();
+        let create_output = match create_operation {
+            Ok(value) => value,
+            Err(err) => return Err(Box::from(format!(" {}", err))),
+        };
+        let json = serde_json::to_string(&create_output)?;
+        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
+
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+
+
+
+        let patch: Patch = Patch::RemovePublicKeys(sidetree_client::RemovePublicKeys {
+            ids: vec!["update_key".to_string()],
+        });
+
+        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+
+        let update_payload = DidUpdatePayload {
+            update_key: create_response.update_key,
+            update_commitment,
+            patches: vec![patch],
+        };
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
+            .did_update(
+                &format!(
+                    "did:evan:{}",
+                    "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
+                ),
+                &"{}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        let respone = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+        println!("did update result: {}", &respone);
+
+        assert_eq!(result.is_ok(), true);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_did_add_service_endpoints() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+
+        let create_operation = operations::create();
+        let create_output = match create_operation {
+            Ok(value) => value,
+            Err(err) => return Err(Box::from(format!(" {}", err))),
+        };
+        let json = serde_json::to_string(&create_output)?;
+        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
+
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+
+        let service = Service {
+            id: "sds".to_string(),
+            service_type: "SecureDataStrore".to_string(),
+            service_endpoint: "https://w3id.org/did-resolution/v1".to_string(),
+        };
+
+        let patch: Patch = Patch::AddServiceEndpoints(sidetree_client::AddServices {
+            service_endpoints: vec![service],
+        });
+
+        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+
+        let update_payload = DidUpdatePayload {
+            update_key: create_response.update_key,
+            update_commitment,
+            patches: vec![patch],
+        };
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
+            .did_update(
+                &format!(
+                    "did:evan:{}",
+                    "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
+                ),
+                &"{}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        let respone = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+        println!("did update result: {}", &respone);
+
+        assert_eq!(result.is_ok(), true);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_did_remove_services() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+
+        let create_operation = operations::create();
+        let create_output = match create_operation {
+            Ok(value) => value,
+            Err(err) => return Err(Box::from(format!(" {}", err))),
+        };
+        let json = serde_json::to_string(&create_output)?;
+        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
+
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+
+
+
+        let patch: Patch = Patch::RemoveServiceEndpoints(sidetree_client::RemoveServices {
+            ids: vec!["sds".to_string()],
+        });
+
+        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+
+        let update_payload = DidUpdatePayload {
+            update_key: create_response.update_key,
+            update_commitment,
+            patches: vec![patch],
         };
 
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
