@@ -14,7 +14,10 @@ pub fn canonicalize_then_hash_then_encode<T: Serialize + ?Sized>(
     value: &T,
     algorithm: HashAlgorithm,
 ) -> String {
-    let canonicalized_string_buffer = canonicalize(value).unwrap();
+    let canonicalized_string_buffer = match canonicalize(value){
+        Ok(value) => value,
+        Err(err) => return err,
+    };
 
     hash_then_encode(&canonicalized_string_buffer, algorithm)
 }
