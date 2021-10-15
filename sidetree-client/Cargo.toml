@@ -16,8 +16,6 @@ sha2 = "0.9"
 multihash = "0.13"
 base64 = "0.13"
 bitflags = "1.2"
-colour = "0.5"
-clap = { version = "3.0.0-beta.2", features = ["yaml"] }
 
 [dependencies.serde]
 default-features = false
@@ -29,9 +27,6 @@ default-features = false
 features = ["std", "float_roundtrip"]
 version = "1.0"
 
-[[bin]]
-name = "sidetree-client"
-path = "bin/main.rs"
 
 [lib]
 name = "sidetree_client"

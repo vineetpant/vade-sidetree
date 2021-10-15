@@ -37,8 +37,6 @@
 //! [`did_update`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.VadeEvanSubstrate.html#method.did_update
 //! [`VadeSidetree `]: https://git.slock.it/equs/interop/vade/vade-sidetree
 //! [`VadePlugin`]: https://docs.rs/vade/*/vade/trait.VadePlugin.html
-#[cfg(target_arch = "wasm32")]
-extern crate instant;
 
 mod datatypes;
 mod vade_sidetree;
