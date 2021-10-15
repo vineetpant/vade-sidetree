@@ -10,20 +10,27 @@ pub fn canonicalize<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>, String>
     serde_jcs::to_vec(value).map_err(|err| format!("{}", err))
 }
 
-pub(crate) fn canonicalize_then_hash_then_encode<T: Serialize + ?Sized>(value: &T, algorithm: HashAlgorithm) -> String {
+pub fn canonicalize_then_hash_then_encode<T: Serialize + ?Sized>(
+    value: &T,
+    algorithm: HashAlgorithm,
+) -> String {
     let canonicalized_string_buffer = canonicalize(value).unwrap();
 
     hash_then_encode(&canonicalized_string_buffer, algorithm)
 }
 
-pub fn canonicalize_then_double_hash_then_encode<T: Serialize + ?Sized>(value: &T) -> Result<String, String> {
+pub fn canonicalize_then_double_hash_then_encode<T: Serialize + ?Sized>(
+    value: &T,
+) -> Result<String, String> {
     let content_buffer = match canonicalize(value) {
         Ok(x) => x,
         Err(_) => return Err("failed to canonicalize".to_string()),
     };
 
-    let intermediate_hash_buffer = hash_as_non_multihash_buffer(content_buffer.as_slice(), HashAlgorithm::Sha256);
-    let multihash_encoded_string = hash_then_encode(intermediate_hash_buffer.as_slice(), HashAlgorithm::Sha256);
+    let intermediate_hash_buffer =
+        hash_as_non_multihash_buffer(content_buffer.as_slice(), HashAlgorithm::Sha256);
+    let multihash_encoded_string =
+        hash_then_encode(intermediate_hash_buffer.as_slice(), HashAlgorithm::Sha256);
     Ok(multihash_encoded_string)
 }
 

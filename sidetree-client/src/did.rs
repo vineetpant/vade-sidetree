@@ -44,8 +44,7 @@ pub struct Service {
     pub id: String,
     #[serde(rename = "type")]
     pub service_type: String,
-    #[serde(rename = "serviceEndpoint")]
-    pub service_endpoint: String,
+    pub endpoint: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

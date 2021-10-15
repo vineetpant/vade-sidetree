@@ -216,10 +216,7 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
     update_key_public.d = None;
 
     let delta = Delta {
-        update_commitment: canonicalize_then_hash_then_encode(
-            &config.patches,
-            crate::multihash::HashAlgorithm::Sha256,
-        ),
+        update_commitment: config.update_commitment,
         patches: config.patches,
     };
 
