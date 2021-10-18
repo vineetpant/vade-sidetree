@@ -53,4 +53,4 @@ test_unit:
    - apt-get update
    - apt-get install -y clang
    - mkdir -p .git/hooks
-   - RUST_LOG=debug cargo test --verbose -- --nocapture
+   - RUST_LOG=trace cargo test --verbose -- --nocapture
