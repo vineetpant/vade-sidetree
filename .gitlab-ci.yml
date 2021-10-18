@@ -17,6 +17,7 @@ services:
     alias: mongo
   - name: docker.slock.it/equs/interop/sidetree-node:latest
     alias: sidetree
+    command: "sleep 20 && yarn start"
 
 variables:
   SIDETREE_API_URL: http://sidetree:3000/1.0/
