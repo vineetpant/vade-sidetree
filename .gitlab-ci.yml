@@ -30,26 +30,26 @@ variables:
   ANCHOR_CONTRACT_ADDRESS: ""
 
 stages:
-  # - build
+  - build
   - test_unit
 
 before_script:
   - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@git.slock.it/".insteadOf 'ssh://git@git.slock.it/'
 
-# build:
-#   stage: build
-#   script:
-#     - apt-get update
-#     - apt-get install -y clang
-#     - cd ..
-#     - rm -rf vade
-#     - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@git.slock.it/equs/interop/vade/vade.git --branch develop
-#     - cd vade-sidetree
-#     - cargo build --release --verbose
-#   artifacts:
-#     paths:
-#       - ./target
-#     expire_in: 1 hour
+build:
+  stage: build
+  script:
+    - apt-get update
+    - apt-get install -y clang
+    - cd ..
+    - rm -rf vade
+    - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@git.slock.it/equs/interop/vade/vade.git --branch develop
+    - cd vade-sidetree
+    - cargo build --release --verbose
+  artifacts:
+    paths:
+      - ./target
+    expire_in: 1 hour
 
 test_unit:
  stage: test_unit
@@ -57,4 +57,4 @@ test_unit:
    - apt-get update
    - apt-get install -y clang
    - mkdir -p .git/hooks
-   - RUST_LOG=trace cargo test --verbose -- --nocapture
+   - cargo test --release
