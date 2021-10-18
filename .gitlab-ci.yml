@@ -22,7 +22,7 @@ variables:
   SIDETREE_API_URL: http://sidetree:3000/1.0/
 
 stages:
-  - build
+  # - build
   - test_unit
 
 before_script:
@@ -49,4 +49,4 @@ test_unit:
    - apt-get update
    - apt-get install -y clang
    - mkdir -p .git/hooks
-   - cargo test --verbose -- --nocapture
+   - RUST_LOG=debug cargo test --verbose -- --nocapture
