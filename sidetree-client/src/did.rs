@@ -58,8 +58,10 @@ pub enum Purpose {
 }
 
 pub(crate) fn compute_unique_suffix(suffix_data: &SuffixData) -> String {
-    let suffix_data_buffer = canonicalize(suffix_data).unwrap();
+    let suffix_data_buffer = match canonicalize(suffix_data){
+        Ok(value) => value,
+        Err(err) => return err,
+    };
     let multihash = hash(&suffix_data_buffer, HashAlgorithm::Sha256);
-
     encode(multihash)
 }
