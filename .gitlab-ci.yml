@@ -22,7 +22,7 @@ variables:
   SIDETREE_API_URL: http://sidetree:3000/1.0/
   ETH_RPC: http://ganache:8545
   MNEMONIC: "beauty satoshi orphan shock since budget make diagram almost caution cactus blouse"
-  WRITE_TO_CAS_AND_BLOCKCHAIN_AFTER_EVERY_OPERATION: true
+  WRITE_TO_CAS_AND_BLOCKCHAIN_AFTER_EVERY_OPERATION: "true"
 
 stages:
   # - build
