@@ -20,6 +20,9 @@ services:
 
 variables:
   SIDETREE_API_URL: http://sidetree:3000/1.0/
+  ETH_RPC: http://ganache:8545
+  MONGO_DB: mongodb://mongo:27017
+  APPLICATION_WALLET_PRIVATE_KEY: "beauty satoshi orphan shock since budget make diagram almost caution cactus blouse"
 
 stages:
   # - build
