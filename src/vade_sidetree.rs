@@ -203,12 +203,11 @@ impl VadePlugin for VadeSidetree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::time;
     use sidetree_client::{
         did::{Purpose, Service},
         multihash, secp256k1,
     };
-    use std::{sync::Once, thread};
+    use std::sync::Once;
 
     static INIT: Once = Once::new();
 
@@ -223,12 +222,6 @@ mod tests {
         enable_logging();
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
-
-        let respone = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
-        };
 
         assert_eq!(result.is_ok(), true);
         Ok(())
@@ -308,7 +301,7 @@ mod tests {
             )
             .await;
 
-        let respone = match result.as_ref() {
+        let _respone = match result.as_ref() {
             Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
             Ok(_) => "Unknown Result".to_string(),
             Err(e) => e.to_string(),
