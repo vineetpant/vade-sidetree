@@ -17,7 +17,7 @@ services:
     alias: mongo
   - name: docker.slock.it/equs/interop/sidetree-node:latest
     alias: sidetree
-    command: ["/bin/sh", "-c", "sleep 2 && yarn start"]
+    command: ["/bin/sh", "-c", "sleep 5 && yarn start"]
     entrypoint: [""]
 
 variables:
@@ -26,6 +26,7 @@ variables:
   MNEMONIC: beauty satoshi orphan shock since budget make diagram almost caution cactus blouse
   WRITE_TO_CAS_AND_BLOCKCHAIN_AFTER_EVERY_OPERATION: "true"
   APPLICATION_WALLET_PRIVATE_KEY: ""
+  FF_NETWORK_PER_BUILD: 1
 
 stages:
   # - build
