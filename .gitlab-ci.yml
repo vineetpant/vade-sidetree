@@ -17,7 +17,7 @@ services:
     alias: mongo
   - name: docker.slock.it/equs/interop/sidetree-node:latest
     alias: sidetree
-    command: ["sleep 5 && yarn start"]
+    command: ["/bin/sh -c 'sleep 5 && yarn start'"]
     entrypoint: [""]
 
 variables:
