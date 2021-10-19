@@ -107,8 +107,8 @@ impl VadePlugin for VadeSidetree {
         )?)))
     }
 
-    /// Updates data related to a DID. Two updates are supported depending on the value of
-    /// `options.operation`.
+    /// Updates data related to a DID. Updates are supported as per Sidetree documentation
+    /// `https://identity.foundation/sidetree/spec/#update`.
     ///
     /// # Arguments
     ///
