@@ -19,12 +19,9 @@ extern crate vade;
 use crate::datatypes::*;
 use async_trait::async_trait;
 use base64::encode_config;
-use serde::{Deserialize, Serialize};
 use sidetree_client::{
-    did::JsonWebKey,
     operations::UpdateOperationInput,
     operations::{self, Operation},
-    Patch,
 };
 use std::collections::HashMap;
 use std::error::Error;
@@ -36,22 +33,6 @@ const EVAN_METHOD: &str = "did:evan";
 /// Side Rest API url
 pub struct VadeSidetree {
     pub config: SideTreeConfig,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
-struct DidUpdatePayload {
-    pub update_key: JsonWebKey,
-    pub update_commitment: String,
-    pub patches: Vec<Patch>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
-struct DidCreateResponse {
-    pub update_key: JsonWebKey,
-    pub recovery_key: JsonWebKey,
-    pub did: SidetreeDidDocument,
 }
 
 impl VadeSidetree {
@@ -73,12 +54,12 @@ impl VadeSidetree {
 
 #[async_trait(?Send)]
 impl VadePlugin for VadeSidetree {
-    /// Creates a new DID on substrate.
+    /// Creates a new DID on sidetree.
     ///
     /// # Arguments
     ///
     /// * `did_method` - did method to cater to, usually "did:evan"
-    /// * `options` - serialized [`IdentityArguments`](https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.IdentityArguments.html)
+    /// * `options` - for sidetree implementation options are not required, so can be left empty
     /// * `payload` - no payload required, so can be left empty
     ///
     async fn did_create(
@@ -132,8 +113,8 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did` - DID to update data for
-    /// * `options` - serialized [`DidUpdateArguments`](https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.DidUpdateArguments.html)
-    /// * `payload` - DID document to set or empty
+    /// * `options` - for sidetree implementation options are not required, so can be left empty
+    /// * `payload` - serialized object of DidUpdatePayload
     ///
     async fn did_update(
         &mut self,
@@ -204,8 +185,9 @@ impl VadePlugin for VadeSidetree {
 mod tests {
     use super::*;
     use sidetree_client::{
-        did::{Purpose, Service},
+        did::{Purpose, Service, JsonWebKey},
         multihash, secp256k1,
+        Patch
     };
     use std::sync::Once;
 
