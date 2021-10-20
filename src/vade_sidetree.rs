@@ -20,6 +20,7 @@ use crate::datatypes::*;
 use async_trait::async_trait;
 use base64::encode_config;
 use sidetree_client::{
+    did::JsonWebKey,
     operations::UpdateOperationInput,
     operations::{self, Operation},
 };
@@ -113,13 +114,13 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did` - DID to update data for
-    /// * `options` - for sidetree implementation options are not required, so can be left empty
+    /// * `options` - serialized object of JsonWebKey, (required for recovery operation),
     /// * `payload` - serialized object of DidUpdatePayload
     ///
     async fn did_update(
         &mut self,
         did: &str,
-        _options: &str,
+        options: &str,
         payload: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
         if !did.starts_with(EVAN_METHOD) {
@@ -132,12 +133,22 @@ impl VadePlugin for VadeSidetree {
                 let operation = UpdateOperationInput::new()
                 .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
                 .with_patches(update_payload.patches)
-                .with_update_key(update_payload.update_or_recovery_key)
-                .with_update_commitment(update_payload.update_or_recovery_commitment);
+                .with_update_key(update_payload.update_key)
+                .with_update_commitment(update_payload.update_commitment);
 
                 operations::update(operation)
             }
-            // UpdateType::Recovery => _
+            UpdateType::Recovery => {
+                let recovery_key: JsonWebKey = serde_json::from_str(options)?;
+
+                let operation = UpdateOperationInput::new()
+                .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                .with_patches(update_payload.patches)
+                .with_update_key(update_payload.update_key)
+                .with_update_commitment(update_payload.update_commitment);
+
+                operations::recover(operation,recovery_key)
+            }
             // UpdateType::Deactivate => _
             _ => return Err(Box::from("Invalid update operation"))
 
@@ -280,8 +291,8 @@ mod tests {
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
-            update_or_recovery_key: create_response.update_key,
-            update_or_recovery_commitment: update_commitment,
+            update_key: create_response.update_key,
+            update_commitment,
             patches: vec![patch],
         };
         let result = did_handler
@@ -400,8 +411,8 @@ mod tests {
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
-            update_or_recovery_key: create_response.update_key,
-            update_or_recovery_commitment: update_commitment,
+            update_key: create_response.update_key,
+            update_commitment,
             patches: vec![patch],
         };
 
@@ -474,8 +485,8 @@ mod tests {
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
-            update_or_recovery_key: create_response.update_key.clone(),
-            update_or_recovery_commitment: update_commitment,
+            update_key: create_response.update_key.clone(),
+            update_commitment,
             patches: vec![patch],
         };
 
@@ -517,8 +528,121 @@ mod tests {
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
-            update_or_recovery_key: (&update1_key_pair).into(),
-            update_or_recovery_commitment: update_commitment,
+            update_key: (&update1_key_pair).into(),
+            update_commitment,
+            patches: vec![patch],
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &"{}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if the service is removed
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(resolve_result.did_document.service.is_none(), true);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        // first create a new DID on sidetree
+        let result = did_handler.did_create("did:evan", "{}", "{}").await;
+
+        let response = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+
+        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+
+        let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
+
+        let service = Service {
+            id: "sds".to_string(),
+            service_type: "SecureDataStrore".to_string(),
+            endpoint: service_endpoint.clone(),
+        };
+
+        let patch: Patch = Patch::AddServiceEndpoints(sidetree_client::AddServices {
+            service_endpoints: vec![service],
+        });
+
+        let update1_key_pair = secp256k1::KeyPair::random();
+        let mut update1_public_key: JsonWebKey = (&update1_key_pair).into();
+        update1_public_key.d = None;
+
+        let update_commitment = multihash::canonicalize_then_hash_then_encode(
+            &update1_public_key,
+            multihash::HashAlgorithm::Sha256,
+        );
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Recovery,
+            update_key: create_response.update_key.clone(),
+            update_commitment,
+            patches: vec![patch],
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &serde_json::to_string(&create_response.recovery_key)?,
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if there is the new added service
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let did_document_services = resolve_result
+            .did_document
+            .service
+            .ok_or("No Services defined")?;
+        assert_eq!(did_document_services.len(), 1);
+        assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
+
+        let patch: Patch = Patch::RemoveServiceEndpoints(sidetree_client::RemoveServices {
+            ids: vec!["sds".to_string()],
+        });
+
+        let update_commitment =
+            multihash::canonicalize_then_hash_then_encode(&patch, multihash::HashAlgorithm::Sha256);
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: (&update1_key_pair).into(),
+            update_commitment,
             patches: vec![patch],
         };
 

@@ -25,6 +25,14 @@ pub struct SignedUpdateDataPayload {
     pub update_key: JsonWebKey,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
+pub struct SignedRecoveryDataPayload {
+    pub delta_hash: String,
+    pub recovery_key: JsonWebKey,
+    pub recovery_commitment: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemovePublicKeys {
     pub ids: Vec<String>,

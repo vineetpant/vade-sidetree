@@ -86,8 +86,8 @@ pub struct Service {
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct DidUpdatePayload {
     pub update_type: UpdateType,
-    pub update_or_recovery_key: JsonWebKey,
-    pub update_or_recovery_commitment: String,
+    pub update_key: JsonWebKey,
+    pub update_commitment: String,
     pub patches: Vec<Patch>,
 }
 
