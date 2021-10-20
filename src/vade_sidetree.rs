@@ -127,13 +127,21 @@ impl VadePlugin for VadeSidetree {
         }
 
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
-        let operation = UpdateOperationInput::new()
-            .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
-            .with_patches(update_payload.patches)
-            .with_update_key(update_payload.update_key)
-            .with_update_commitment(update_payload.update_commitment);
+        let update_operation = match update_payload.update_type {
+            UpdateType::Update => {
+                let operation = UpdateOperationInput::new()
+                .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                .with_patches(update_payload.patches)
+                .with_update_key(update_payload.update_or_recovery_key)
+                .with_update_commitment(update_payload.update_or_recovery_commitment);
 
-        let update_operation = operations::update(operation);
+                operations::update(operation)
+            }
+            // UpdateType::Recovery => _
+            // UpdateType::Deactivate => _
+            _ => return Err(Box::from("Invalid update operation"))
+
+        };
         let update_output = match update_operation {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!(" {}", err))),
@@ -271,8 +279,9 @@ mod tests {
         let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
 
         let update_payload = DidUpdatePayload {
-            update_key: create_response.update_key,
-            update_commitment,
+            update_type: UpdateType::Update,
+            update_or_recovery_key: create_response.update_key,
+            update_or_recovery_commitment: update_commitment,
             patches: vec![patch],
         };
         let result = did_handler
@@ -390,8 +399,9 @@ mod tests {
         );
 
         let update_payload = DidUpdatePayload {
-            update_key: create_response.update_key,
-            update_commitment,
+            update_type: UpdateType::Update,
+            update_or_recovery_key: create_response.update_key,
+            update_or_recovery_commitment: update_commitment,
             patches: vec![patch],
         };
 
@@ -463,8 +473,9 @@ mod tests {
         );
 
         let update_payload = DidUpdatePayload {
-            update_key: create_response.update_key.clone(),
-            update_commitment,
+            update_type: UpdateType::Update,
+            update_or_recovery_key: create_response.update_key.clone(),
+            update_or_recovery_commitment: update_commitment,
             patches: vec![patch],
         };
 
@@ -505,8 +516,9 @@ mod tests {
             multihash::canonicalize_then_hash_then_encode(&patch, multihash::HashAlgorithm::Sha256);
 
         let update_payload = DidUpdatePayload {
-            update_key: (&update1_key_pair).into(),
-            update_commitment,
+            update_type: UpdateType::Update,
+            update_or_recovery_key: (&update1_key_pair).into(),
+            update_or_recovery_commitment: update_commitment,
             patches: vec![patch],
         };
 

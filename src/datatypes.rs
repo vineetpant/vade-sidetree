@@ -4,6 +4,14 @@ use sidetree_client::{did::JsonWebKey, Delta, SuffixData, Patch};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
+pub enum UpdateType {
+    Update,
+    Recovery,
+    Deactivate,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationRequestGenerated {
     pub r#type: String,
     pub suffix_data: SuffixData,
@@ -77,8 +85,9 @@ pub struct Service {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct DidUpdatePayload {
-    pub update_key: JsonWebKey,
-    pub update_commitment: String,
+    pub update_type: UpdateType,
+    pub update_or_recovery_key: JsonWebKey,
+    pub update_or_recovery_commitment: String,
     pub patches: Vec<Patch>,
 }
 
