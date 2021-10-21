@@ -10,7 +10,7 @@
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language g id: todo!(), service_type: todo!(), service_endpoint: todo!()  id: todo!(), service_type: todo!(), service_endpoint: todo!()  id: todo!(), service_type: todo!(), service_endpoint: todo!() overning permissions and
+  See the License for the specific language governing permissions and
   limitations under the License.
 */
 
@@ -31,7 +31,7 @@ use vade::{VadePlugin, VadePluginResultValue};
 const DEFAULT_URL: &str = "http://localhost:3000/1.0/";
 const EVAN_METHOD: &str = "did:evan";
 
-/// Side Rest API url
+/// Sidetree Rest API url
 pub struct VadeSidetree {
     pub config: SideTreeConfig,
 }
@@ -60,9 +60,8 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did_method` - did method to cater to, usually "did:evan"
-    /// * `options` - for sidetree implementation options are not required, so can be left empty
-    /// * `payload` - no payload required, so can be left empty
-    ///
+    /// * `_options` - for sidetree implementation options are not required, so can be left empty
+    /// * `_payload` - no payload required, so can be left empty
     async fn did_create(
         &mut self,
         did_method: &str,
@@ -75,7 +74,7 @@ impl VadePlugin for VadeSidetree {
         let create_operation = operations::create();
         let create_output = match create_operation {
             Ok(value) => value,
-            Err(err) => return Err(Box::from(format!(" {}", err))),
+            Err(err) => return Err(Box::from(format!("{}", err))),
         };
         let json = serde_json::to_string(&create_output)?;
         let mut api_url = self.config.sidetree_rest_api_url.clone();
@@ -116,7 +115,6 @@ impl VadePlugin for VadeSidetree {
     /// * `did` - DID to update data for
     /// * `options` - serialized object of JsonWebKey, (required only for recovery and deactivate),
     /// * `payload` - serialized object of DidUpdatePayload
-    ///
     async fn did_update(
         &mut self,
         did: &str,
@@ -172,7 +170,7 @@ impl VadePlugin for VadeSidetree {
         };
         let update_output = match update_operation {
             Ok(value) => value,
-            Err(err) => return Err(Box::from(format!(" {}", err))),
+            Err(err) => return Err(Box::from(format!("{}", err))),
         };
 
         if let Operation::Update(did, delta, signed) = update_output.operation_request {
@@ -377,56 +375,58 @@ mod tests {
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
-    //     enable_logging();
+    #[ignore]
+    #[tokio::test]
+    async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
 
-    //     let create_operation = operations::create();
-    //     let create_output = match create_operation {
-    //         Ok(value) => value,
-    //         Err(err) => return Err(Box::from(format!(" {}", err))),
-    //     };
-    //     let json = serde_json::to_string(&create_output)?;
-    //     let create_response: DIDCreateResult = serde_json::from_str(&json)?;
+        let create_operation = operations::create();
+        let create_output = match create_operation {
+            Ok(value) => value,
+            Err(err) => return Err(Box::from(format!(" {}", err))),
+        };
+        let json = serde_json::to_string(&create_output)?;
+        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
 
-    //     let key_pair = secp256k1::KeyPair::random();
-    //     let update_key =
-    //         key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
-    //     let patch: Patch = Patch::RemovePublicKeys(sidetree_client::RemovePublicKeys {
-    //         ids: vec!["update_key".to_string()],
-    //     });
+        let patch: Patch = Patch::RemovePublicKeys(sidetree_client::RemovePublicKeys {
+            ids: vec!["update_key".to_string()],
+        });
 
-    //     let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
 
-    //     let update_payload = DidUpdatePayload {
-    //         update_key: create_response.update_key,
-    //         update_commitment,
-    //         patches: vec![patch],
-    //     };
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(create_response.update_key),
+            update_commitment: Some(update_commitment),
+            patches: Some(vec![patch]),
+        };
 
-    //     let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-    //     let result = did_handler
-    //         .did_update(
-    //             &format!(
-    //                 "did:evan:{}",
-    //                 "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
-    //             ),
-    //             &"{}",
-    //             &serde_json::to_string(&update_payload)?,
-    //         )
-    //         .await;
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
+            .did_update(
+                &format!(
+                    "did:evan:{}",
+                    "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
+                ),
+                &"{}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
 
-    //     let respone = match result.as_ref() {
-    //         Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-    //         Ok(_) => "Unknown Result".to_string(),
-    //         Err(e) => e.to_string(),
-    //     };
-    //     println!("did update result: {}", &respone);
+        let respone = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+        println!("did update result: {}", &respone);
 
-    //     assert_eq!(result.is_ok(), true);
-    //     Ok(())
-    // }
+        assert_eq!(result.is_ok(), true);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn can_update_did_add_service_endpoints() -> Result<(), Box<dyn std::error::Error>> {
