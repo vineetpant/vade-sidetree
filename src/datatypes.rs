@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sidetree_client::{did::JsonWebKey, Delta, SuffixData, Patch};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub enum UpdateType {
     Update,
@@ -86,9 +86,9 @@ pub struct Service {
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct DidUpdatePayload {
     pub update_type: UpdateType,
-    pub update_key: JsonWebKey,
-    pub update_commitment: String,
-    pub patches: Vec<Patch>,
+    pub update_key: Option<JsonWebKey>,
+    pub update_commitment: Option<String>,
+    pub patches: Option<Vec<Patch>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

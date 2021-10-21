@@ -4,7 +4,7 @@ use crate::{
     did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
     SuffixData,
 };
-use crate::{Error, ReplaceDocument, SignedRecoveryDataPayload, SignedUpdateDataPayload};
+use crate::{Error, ReplaceDocument, SignedRecoveryDataPayload, SignedUpdateDataPayload, SignedDeactivateDataPayload};
 use secp256k1::SecretKey;
 use serde::{ser::SerializeMap, Serialize};
 use sha2::{Digest, Sha256};
@@ -13,6 +13,8 @@ use sha2::{Digest, Sha256};
 pub enum Operation {
     Create(SuffixData, Delta),
     Update(String, Delta, String),
+    Recover(String, Delta, String),
+    Deactivate(String, String),
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -116,6 +118,17 @@ impl Serialize for Operation {
                 map.serialize_entry("type", "update")?;
                 map.serialize_entry("did_suffix", did_suffix)?;
                 map.serialize_entry("delta", delta)?;
+                map.serialize_entry("signed_data", signed_data)?;
+            }
+            Operation::Recover(did_suffix, delta, signed_data) => {
+                map.serialize_entry("type", "update")?;
+                map.serialize_entry("did_suffix", did_suffix)?;
+                map.serialize_entry("delta", delta)?;
+                map.serialize_entry("signed_data", signed_data)?;
+            }
+            Operation::Deactivate(did_suffix, signed_data) => {
+                map.serialize_entry("type", "deactivate")?;
+                map.serialize_entry("did_suffix", did_suffix)?;
                 map.serialize_entry("signed_data", signed_data)?;
             }
         }
@@ -342,7 +355,73 @@ pub fn recover<'a>(config: UpdateOperationInput, recovery_key: JsonWebKey) -> Re
         &mut message,
     );
 
-    let operation = Operation::Update(config.did_suffix, delta, message);
+    let operation = Operation::Recover(config.did_suffix, delta, message);
+
+    Ok(UpdateOperationOutput {
+        operation_request: operation,
+    })
+}
+
+pub fn deactivate<'a>(did_suffix: String, recovery_key: JsonWebKey) -> Result<UpdateOperationOutput, Error<'a>> {
+    let mut public_key_x = decode(recovery_key.x).unwrap();
+    let mut public_key_y = decode(recovery_key.y).unwrap();
+    let mut full_pub_key = Vec::<u8>::new();
+    full_pub_key.append(&mut vec![0x04]);
+    full_pub_key.append(&mut public_key_x);
+    full_pub_key.append(&mut public_key_y);
+    let mut public_key_arr: [u8; 65] = [0; 65];
+    public_key_arr.copy_from_slice(&full_pub_key[0..65]);
+    let mut secret_key = None;
+    if let Some(d) = recovery_key.d {
+        let secret_key_decoded = decode(d).unwrap();
+        let mut secret_key_arr: [u8; 32] = Default::default();
+        secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
+        secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
+    }
+    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+
+    let recovery_keypair = KeyPair {
+        public_key,
+        secret_key,
+    };
+
+    let mut recovery_key_public: JsonWebKey = (&recovery_keypair).into();
+    recovery_key_public.d = None;
+
+    let signed_data_payload = SignedDeactivateDataPayload {
+        recovery_key: recovery_key_public.clone(),
+        did_suffix: did_suffix.clone()
+    };
+
+    let protected_header = "{\"alg\":\"ES256K\"}";
+    let mut message = String::new();
+    message.push_str(&base64::encode_config(
+        protected_header,
+        base64::URL_SAFE_NO_PAD,
+    ));
+    message.push_str(".");
+    message.push_str(&base64::encode_config(
+        serde_json::to_string(&signed_data_payload).unwrap(),
+        base64::URL_SAFE_NO_PAD,
+    ));
+
+    let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(message.clone());
+
+    // read hash digest and consume hasher
+    let message_hash = hasher.finalize();
+
+    let (signed_data, _) = recovery_keypair.sign(message_hash.as_slice());
+
+    message.push_str(".");
+    base64::encode_config_buf(
+        signed_data.serialize(),
+        base64::URL_SAFE_NO_PAD,
+        &mut message,
+    );
+
+    let operation = Operation::Deactivate(did_suffix, message);
 
     Ok(UpdateOperationOutput {
         operation_request: operation,
