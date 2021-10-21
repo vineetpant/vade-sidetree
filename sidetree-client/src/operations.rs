@@ -4,7 +4,10 @@ use crate::{
     did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
     SuffixData,
 };
-use crate::{Error, ReplaceDocument, SignedRecoveryDataPayload, SignedUpdateDataPayload, SignedDeactivateDataPayload};
+use crate::{
+    Error, ReplaceDocument, SignedDeactivateDataPayload, SignedRecoveryDataPayload,
+    SignedUpdateDataPayload,
+};
 use secp256k1::SecretKey;
 use serde::{ser::SerializeMap, Serialize};
 use sha2::{Digest, Sha256};
@@ -280,7 +283,10 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
     })
 }
 
-pub fn recover<'a>(config: UpdateOperationInput, recovery_key: JsonWebKey) -> Result<UpdateOperationOutput, Error<'a>> {
+pub fn recover<'a>(
+    config: UpdateOperationInput,
+    recovery_key: JsonWebKey,
+) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(recovery_key.x).unwrap();
     let mut public_key_y = decode(recovery_key.y).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
@@ -362,7 +368,10 @@ pub fn recover<'a>(config: UpdateOperationInput, recovery_key: JsonWebKey) -> Re
     })
 }
 
-pub fn deactivate<'a>(did_suffix: String, recovery_key: JsonWebKey) -> Result<UpdateOperationOutput, Error<'a>> {
+pub fn deactivate<'a>(
+    did_suffix: String,
+    recovery_key: JsonWebKey,
+) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(recovery_key.x).unwrap();
     let mut public_key_y = decode(recovery_key.y).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
@@ -390,7 +399,7 @@ pub fn deactivate<'a>(did_suffix: String, recovery_key: JsonWebKey) -> Result<Up
 
     let signed_data_payload = SignedDeactivateDataPayload {
         recovery_key: recovery_key_public.clone(),
-        did_suffix: did_suffix.clone()
+        did_suffix: did_suffix.clone(),
     };
 
     let protected_header = "{\"alg\":\"ES256K\"}";

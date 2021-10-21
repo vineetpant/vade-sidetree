@@ -114,7 +114,7 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did` - DID to update data for
-    /// * `options` - serialized object of JsonWebKey, (required for recovery operation),
+    /// * `options` - serialized object of JsonWebKey, (required only for recovery and deactivate),
     /// * `payload` - serialized object of DidUpdatePayload
     ///
     async fn did_update(

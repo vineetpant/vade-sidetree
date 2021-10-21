@@ -58,7 +58,7 @@ pub enum Purpose {
 }
 
 pub(crate) fn compute_unique_suffix(suffix_data: &SuffixData) -> String {
-    let suffix_data_buffer = match canonicalize(suffix_data){
+    let suffix_data_buffer = match canonicalize(suffix_data) {
         Ok(value) => value,
         Err(err) => return err,
     };
