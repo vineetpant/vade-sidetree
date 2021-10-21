@@ -168,7 +168,7 @@ impl VadePlugin for VadeSidetree {
                 let did_suffix = did.split(":").last().ok_or("did not valid")?.to_string();
 
                 operations::deactivate(did_suffix, recovery_key)
-            } // _ => return Err(Box::from("Invalid update operation")),
+            }
         };
         let update_output = match update_operation {
             Ok(value) => value,
@@ -179,20 +179,48 @@ impl VadePlugin for VadeSidetree {
             let mut api_url = self.config.sidetree_rest_api_url.clone();
             api_url.push_str("operations");
             let mut delta_base64 = String::new();
-
-            if update_payload.update_type != UpdateType::Deactivate {
-                delta_base64.push_str(&encode_config(
-                    serde_json::to_string(&delta)?,
-                    base64::STANDARD_NO_PAD,
-                ));
-            }
+            delta_base64.push_str(&encode_config(
+                serde_json::to_string(&delta)?,
+                base64::STANDARD_NO_PAD,
+            ));
             let mut map = HashMap::new();
             map.insert("type", &operation_type);
             map.insert("signed_data", &signed);
             map.insert("did_suffix", &did);
-            if update_payload.update_type != UpdateType::Deactivate {
-                map.insert("delta", &delta_base64);
-            }
+            map.insert("delta", &delta_base64);
+
+            let client = reqwest::Client::new();
+            let res = client.post(api_url).json(&map).send().await?.text().await?;
+            return Ok(VadePluginResultValue::Success(Some(res)));
+        }
+        if let Operation::Recover(did, delta, signed) = update_output.operation_request {
+            let mut api_url = self.config.sidetree_rest_api_url.clone();
+            api_url.push_str("operations");
+            let mut delta_base64 = String::new();
+            delta_base64.push_str(&encode_config(
+                serde_json::to_string(&delta)?,
+                base64::STANDARD_NO_PAD,
+            ));
+
+            let mut map = HashMap::new();
+            map.insert("type", &operation_type);
+            map.insert("signed_data", &signed);
+            map.insert("did_suffix", &did);
+            map.insert("delta", &delta_base64);
+
+            let client = reqwest::Client::new();
+            let res = client.post(api_url).json(&map).send().await?.text().await?;
+            return Ok(VadePluginResultValue::Success(Some(res)));
+        }
+
+        if let Operation::Deactivate(did, signed) = update_output.operation_request {
+            let mut api_url = self.config.sidetree_rest_api_url.clone();
+            api_url.push_str("operations");
+
+            let mut map = HashMap::new();
+            map.insert("type", &operation_type);
+            map.insert("signed_data", &signed);
+            map.insert("did_suffix", &did);
 
             let client = reqwest::Client::new();
             let res = client.post(api_url).json(&map).send().await?.text().await?;

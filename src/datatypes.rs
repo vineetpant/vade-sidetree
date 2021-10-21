@@ -3,7 +3,7 @@ use serde_json::Value;
 use sidetree_client::{did::JsonWebKey, Delta, SuffixData, Patch};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all(serialize = "snake_case"))]
+#[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
 pub enum UpdateType {
     Update,
     Recovery,
