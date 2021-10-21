@@ -10,7 +10,7 @@
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language g id: todo!(), service_type: todo!(), service_endpoint: todo!()  id: todo!(), service_type: todo!(), service_endpoint: todo!()  id: todo!(), service_type: todo!(), service_endpoint: todo!() overning permissions and
+  See the License for the specific language governing permissions and
   limitations under the License.
 */
 
@@ -30,7 +30,7 @@ use vade::{VadePlugin, VadePluginResultValue};
 const DEFAULT_URL: &str = "http://localhost:3000/1.0/";
 const EVAN_METHOD: &str = "did:evan";
 
-/// Side Rest API url
+/// Sidetree Rest API url
 pub struct VadeSidetree {
     pub config: SideTreeConfig,
 }
@@ -59,9 +59,8 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did_method` - did method to cater to, usually "did:evan"
-    /// * `options` - for sidetree implementation options are not required, so can be left empty
-    /// * `payload` - no payload required, so can be left empty
-    ///
+    /// * `_options` - for sidetree implementation options are not required, so can be left empty
+    /// * `_payload` - no payload required, so can be left empty
     async fn did_create(
         &mut self,
         did_method: &str,
@@ -74,7 +73,7 @@ impl VadePlugin for VadeSidetree {
         let create_operation = operations::create();
         let create_output = match create_operation {
             Ok(value) => value,
-            Err(err) => return Err(Box::from(format!(" {}", err))),
+            Err(err) => return Err(Box::from(format!("{}", err))),
         };
         let json = serde_json::to_string(&create_output)?;
         let mut api_url = self.config.sidetree_rest_api_url.clone();
@@ -113,9 +112,8 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did` - DID to update data for
-    /// * `options` - for sidetree implementation options are not required, so can be left empty
+    /// * `_options` - for sidetree implementation options are not required, so can be left empty
     /// * `payload` - serialized object of DidUpdatePayload
-    ///
     async fn did_update(
         &mut self,
         did: &str,
@@ -136,7 +134,7 @@ impl VadePlugin for VadeSidetree {
         let update_operation = operations::update(operation);
         let update_output = match update_operation {
             Ok(value) => value,
-            Err(err) => return Err(Box::from(format!(" {}", err))),
+            Err(err) => return Err(Box::from(format!("{}", err))),
         };
 
         if let Operation::Update(did, delta, signed) = update_output.operation_request {
