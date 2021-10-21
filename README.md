@@ -16,4 +16,9 @@ Supports creating, updating and getting DIDs and DID documents based on sidetree
 - [`did_resolve`]
 - [`did_update`]
 
-##  add more documentation lile vade-substrate
+[`did_create`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/resolver/struct.VadeEvanSubstrate.html#method.did_create
+[`did_resolve`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/resolver/struct.VadeEvanSubstrate.html#method.did_resolve
+[`did_update`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/resolver/struct.VadeEvanSubstrate.html#method.did_update
+[`VadeSidetree`]: https://git.slock.it/equs/interop/vade/vade-sidetree
+[`Vade`]: https://docs.rs/vade/*/vade/struct.Vade.html
+[`VadePlugin`]: https://docs.rs/vade/*/vade/trait.VadePlugin.html

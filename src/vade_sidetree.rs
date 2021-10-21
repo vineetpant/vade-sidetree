@@ -303,56 +303,57 @@ mod tests {
         Ok(())
     }
 
-    // #[tokio::test]
-    // async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
-    //     enable_logging();
+    #[ignore]
+    #[tokio::test]
+    async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
 
-    //     let create_operation = operations::create();
-    //     let create_output = match create_operation {
-    //         Ok(value) => value,
-    //         Err(err) => return Err(Box::from(format!(" {}", err))),
-    //     };
-    //     let json = serde_json::to_string(&create_output)?;
-    //     let create_response: DIDCreateResult = serde_json::from_str(&json)?;
+        let create_operation = operations::create();
+        let create_output = match create_operation {
+            Ok(value) => value,
+            Err(err) => return Err(Box::from(format!(" {}", err))),
+        };
+        let json = serde_json::to_string(&create_output)?;
+        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
 
-    //     let key_pair = secp256k1::KeyPair::random();
-    //     let update_key =
-    //         key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
-    //     let patch: Patch = Patch::RemovePublicKeys(sidetree_client::RemovePublicKeys {
-    //         ids: vec!["update_key".to_string()],
-    //     });
+        let patch: Patch = Patch::RemovePublicKeys(sidetree_client::RemovePublicKeys {
+            ids: vec!["update_key".to_string()],
+        });
 
-    //     let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
 
-    //     let update_payload = DidUpdatePayload {
-    //         update_key: create_response.update_key,
-    //         update_commitment,
-    //         patches: vec![patch],
-    //     };
+        let update_payload = DidUpdatePayload {
+            update_key: create_response.update_key,
+            update_commitment,
+            patches: vec![patch],
+        };
 
-    //     let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-    //     let result = did_handler
-    //         .did_update(
-    //             &format!(
-    //                 "did:evan:{}",
-    //                 "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
-    //             ),
-    //             &"{}",
-    //             &serde_json::to_string(&update_payload)?,
-    //         )
-    //         .await;
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
+            .did_update(
+                &format!(
+                    "did:evan:{}",
+                    "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
+                ),
+                &"{}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
 
-    //     let respone = match result.as_ref() {
-    //         Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-    //         Ok(_) => "Unknown Result".to_string(),
-    //         Err(e) => e.to_string(),
-    //     };
-    //     println!("did update result: {}", &respone);
+        let respone = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+        println!("did update result: {}", &respone);
 
-    //     assert_eq!(result.is_ok(), true);
-    //     Ok(())
-    // }
+        assert_eq!(result.is_ok(), true);
+        Ok(())
+    }
 
     #[tokio::test]
     async fn can_update_did_add_service_endpoints() -> Result<(), Box<dyn std::error::Error>> {
