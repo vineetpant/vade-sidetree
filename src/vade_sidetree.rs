@@ -703,6 +703,19 @@ mod tests {
             .await;
 
         assert_eq!(result.is_ok(), true);
+        // after update, resolve and check if the service is removed
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+
+        assert_eq!(did_resolve, "{\"status\":\"deactivated\"}");
+
         Ok(())
     }
 }
