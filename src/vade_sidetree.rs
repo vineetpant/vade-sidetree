@@ -127,31 +127,33 @@ impl VadePlugin for VadeSidetree {
             return Ok(VadePluginResultValue::Ignored);
         }
 
+        let mut operation_type: String = String::new(); 
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
         let update_operation = match update_payload.update_type {
             UpdateType::Update => {
+                operation_type.push_str("update");
                 let operation = UpdateOperationInput::new()
-                .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
-                .with_patches(update_payload.patches)
-                .with_update_key(update_payload.update_key)
-                .with_update_commitment(update_payload.update_commitment);
+                    .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                    .with_patches(update_payload.patches)
+                    .with_update_key(update_payload.update_key)
+                    .with_update_commitment(update_payload.update_commitment);
 
                 operations::update(operation)
             }
             UpdateType::Recovery => {
+                operation_type.push_str("recover");
                 let recovery_key: JsonWebKey = serde_json::from_str(options)?;
 
                 let operation = UpdateOperationInput::new()
-                .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
-                .with_patches(update_payload.patches)
-                .with_update_key(update_payload.update_key)
-                .with_update_commitment(update_payload.update_commitment);
+                    .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                    .with_patches(update_payload.patches)
+                    .with_update_key(update_payload.update_key)
+                    .with_update_commitment(update_payload.update_commitment);
 
-                operations::recover(operation,recovery_key)
+                operations::recover(operation, recovery_key)
             }
             // UpdateType::Deactivate => _
-            _ => return Err(Box::from("Invalid update operation"))
-
+            _ => return Err(Box::from("Invalid update operation")),
         };
         let update_output = match update_operation {
             Ok(value) => value,
@@ -165,7 +167,7 @@ impl VadePlugin for VadeSidetree {
                 &encode_config(serde_json::to_string(&delta)?, base64::STANDARD_NO_PAD);
 
             let mut map = HashMap::new();
-            map.insert("type", "update");
+            map.insert("type", &operation_type);
             map.insert("signed_data", &signed);
             map.insert("did_suffix", &did);
             map.insert("delta", delta_base64);
@@ -203,11 +205,7 @@ impl VadePlugin for VadeSidetree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sidetree_client::{
-        did::{Purpose, Service, JsonWebKey},
-        multihash, secp256k1,
-        Patch
-    };
+    use sidetree_client::{Patch, did::{Document, JsonWebKey, Purpose, Service}, multihash, secp256k1};
     use std::sync::Once;
 
     static INIT: Once = Once::new();
@@ -583,13 +581,16 @@ mod tests {
             endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServiceEndpoints(sidetree_client::AddServices {
-            service_endpoints: vec![service],
-        });
-
         let update1_key_pair = secp256k1::KeyPair::random();
         let mut update1_public_key: JsonWebKey = (&update1_key_pair).into();
         update1_public_key.d = None;
+
+        let patch: Patch = Patch::Replace(sidetree_client::ReplaceDocument {
+            document: Document {
+                public_keys: vec![update1_key_pair.to_public_key("doc_key".into(), Some([Purpose::Agreement].to_vec()))],
+                services: Some(vec![service]),
+            },
+        });
 
         let update_commitment = multihash::canonicalize_then_hash_then_encode(
             &update1_public_key,
