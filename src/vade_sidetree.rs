@@ -173,58 +173,39 @@ impl VadePlugin for VadeSidetree {
             Err(err) => return Err(Box::from(format!("{}", err))),
         };
 
-        if let Operation::Update(did, delta, signed) = update_output.operation_request {
-            let mut api_url = self.config.sidetree_rest_api_url.clone();
-            api_url.push_str("operations");
-            let mut delta_base64 = String::new();
-            delta_base64.push_str(&encode_config(
-                serde_json::to_string(&delta)?,
-                base64::STANDARD_NO_PAD,
-            ));
-            let mut map = HashMap::new();
-            map.insert("type", &operation_type);
-            map.insert("signed_data", &signed);
-            map.insert("did_suffix", &did);
-            map.insert("delta", &delta_base64);
+        let mut api_url = self.config.sidetree_rest_api_url.clone();
+        let mut map = HashMap::new();
+        let client = reqwest::Client::new();
 
-            let client = reqwest::Client::new();
-            let res = client.post(api_url).json(&map).send().await?.text().await?;
-            return Ok(VadePluginResultValue::Success(Some(res)));
-        }
-        if let Operation::Recover(did, delta, signed) = update_output.operation_request {
-            let mut api_url = self.config.sidetree_rest_api_url.clone();
-            api_url.push_str("operations");
-            let mut delta_base64 = String::new();
-            delta_base64.push_str(&encode_config(
-                serde_json::to_string(&delta)?,
-                base64::STANDARD_NO_PAD,
-            ));
+        api_url.push_str("operations");
 
-            let mut map = HashMap::new();
-            map.insert("type", &operation_type);
-            map.insert("signed_data", &signed);
-            map.insert("did_suffix", &did);
-            map.insert("delta", &delta_base64);
+        let res = match update_output.operation_request {
+            Operation::Update(did, delta, signed) | Operation::Recover(did, delta, signed) => {
+                let mut delta_base64 = String::new();
+                delta_base64.push_str(&encode_config(
+                    serde_json::to_string(&delta)?,
+                    base64::STANDARD_NO_PAD,
+                ));
+                
+                map.insert("type", &operation_type);
+                map.insert("signed_data", &signed);
+                map.insert("did_suffix", &did);
+                map.insert("delta", &delta_base64);
 
-            let client = reqwest::Client::new();
-            let res = client.post(api_url).json(&map).send().await?.text().await?;
-            return Ok(VadePluginResultValue::Success(Some(res)));
-        }
+                client.post(api_url).json(&map).send().await?.text().await?
+            }
 
-        if let Operation::Deactivate(did, signed) = update_output.operation_request {
-            let mut api_url = self.config.sidetree_rest_api_url.clone();
-            api_url.push_str("operations");
+            Operation::Deactivate(did, signed) => {
+                map.insert("type", &operation_type);
+                map.insert("signed_data", &signed);
+                map.insert("did_suffix", &did);
 
-            let mut map = HashMap::new();
-            map.insert("type", &operation_type);
-            map.insert("signed_data", &signed);
-            map.insert("did_suffix", &did);
+                client.post(api_url).json(&map).send().await?.text().await?
+            }
+            _ => return Err(Box::from("Invalid operation")),
+        };
 
-            let client = reqwest::Client::new();
-            let res = client.post(api_url).json(&map).send().await?.text().await?;
-            return Ok(VadePluginResultValue::Success(Some(res)));
-        }
-        Ok(VadePluginResultValue::Success(Some("".to_string())))
+        Ok(VadePluginResultValue::Success(Some(res)))
     }
 
     /// Fetch data about a DID, which returns this DID's DID document.
@@ -611,6 +592,7 @@ mod tests {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
