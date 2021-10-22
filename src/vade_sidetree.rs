@@ -627,13 +627,55 @@ mod tests {
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
-        let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
+        // resolve DID
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
 
-        let service = Service {
-            id: "sds".to_string(),
-            service_type: "SecureDataStrore".to_string(),
-            endpoint: service_endpoint.clone(),
+        let did_resolve = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
         };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(
+            resolve_result.did_document.id,
+            create_response.did.did_document.id
+        );
+
+        // deactivate DID
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Deactivate,
+            update_key: None,
+            update_commitment: None,
+            patches: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &serde_json::to_string(&create_response.recovery_key)?,
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if the DID is deactivated
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+
+        assert_eq!(did_resolve, "{\"status\":\"deactivated\"}");
+
+        // try to recover DID
 
         let update1_key_pair = secp256k1::KeyPair::random();
         let mut update1_public_key: JsonWebKey = (&update1_key_pair).into();
@@ -643,7 +685,7 @@ mod tests {
             document: Document {
                 public_keys: vec![update1_key_pair
                     .to_public_key("doc_key".into(), Some([Purpose::Agreement].to_vec()))],
-                services: Some(vec![service]),
+                services: None,
             },
         });
 
@@ -654,18 +696,35 @@ mod tests {
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Recovery,
-            update_key: Some(create_response.update_key),
+            update_key: Some(update1_public_key),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
         };
 
-        let result = did_handler
+        let _result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
                 &serde_json::to_string(&create_response.recovery_key)?,
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
+
+        // try to resolve DID after recovery
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result.as_ref() {
+            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
+            Ok(_) => "Unknown Result".to_string(),
+            Err(e) => e.to_string(),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(
+            resolve_result.did_document.id,
+            create_response.did.did_document.id
+        );
 
         assert_eq!(result.is_ok(), true);
         Ok(())
@@ -703,7 +762,7 @@ mod tests {
             .await;
 
         assert_eq!(result.is_ok(), true);
-        // after update, resolve and check if the service is removed
+        // after update, resolve and check if the DID is deactivated
         let result = did_handler
             .did_resolve(&create_response.did.did_document.id)
             .await;
