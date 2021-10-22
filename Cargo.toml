@@ -1,0 +1,29 @@
+[package]
+name = "vade-sidetree"
+version = "0.0.1"
+authors = ["evan GmbH"]
+edition = "2018"
+license-file = "LICENSE.txt"
+description = "handling DIDs based on sidetree implementation"
+readme = "README.md"
+keywords = ["did", "ssi"]
+
+[lib]
+name = "vade_sidetree"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.31"
+base64 = "0.13.0"
+env_logger = "0.7.1"
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sidetree-client = { path = "./sidetree-client" }
+sha2 = "0.9.5"
+vade = { git = "ssh://git@git.slock.it/equs/interop/vade/vade.git", branch = "develop", version = "0.1.0" }
+
+[dev-dependencies]
+tokio = { version = "=1.7.1", features = ["macros", "rt-multi-thread"] }
