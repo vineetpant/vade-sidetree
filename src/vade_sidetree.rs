@@ -126,10 +126,15 @@ impl VadePlugin for VadeSidetree {
         }
 
         let mut operation_type: String = String::new();
+        let mut api_url = self.config.sidetree_rest_api_url.clone();
+        let mut map = HashMap::new();
+        let client = reqwest::Client::new();
+
+        api_url.push_str("operations");
+
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
         let update_operation = match update_payload.update_type {
-            UpdateType::Update => {
-                operation_type.push_str("update");
+            UpdateType::Update | UpdateType::Recovery => {
                 let operation = UpdateOperationInput::new()
                     .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
                     .with_patches(update_payload.patches.ok_or("patches not valid")?)
@@ -141,24 +146,14 @@ impl VadePlugin for VadeSidetree {
                             .to_string(),
                     );
 
-                operations::update(operation)
-            }
-            UpdateType::Recovery => {
-                operation_type.push_str("recover");
-                let recovery_key: JsonWebKey = serde_json::from_str(options)?;
-
-                let operation = UpdateOperationInput::new()
-                    .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
-                    .with_patches(update_payload.patches.ok_or("patches not valid")?)
-                    .with_update_key(update_payload.update_key.ok_or("update_key not valid")?)
-                    .with_update_commitment(
-                        update_payload
-                            .update_commitment
-                            .ok_or("update_commitment not valid")?
-                            .to_string(),
-                    );
-
-                operations::recover(operation, recovery_key)
+                if update_payload.update_type == UpdateType::Update {
+                    operation_type.push_str("update");
+                    operations::update(operation)
+                } else {
+                    let recovery_key: JsonWebKey = serde_json::from_str(options)?;
+                    operation_type.push_str("recover");
+                    operations::recover(operation, recovery_key)
+                }
             }
             UpdateType::Deactivate => {
                 operation_type.push_str("deactivate");
@@ -173,12 +168,6 @@ impl VadePlugin for VadeSidetree {
             Err(err) => return Err(Box::from(format!("{}", err))),
         };
 
-        let mut api_url = self.config.sidetree_rest_api_url.clone();
-        let mut map = HashMap::new();
-        let client = reqwest::Client::new();
-
-        api_url.push_str("operations");
-
         let res = match update_output.operation_request {
             Operation::Update(did, delta, signed) | Operation::Recover(did, delta, signed) => {
                 let mut delta_base64 = String::new();
@@ -186,7 +175,7 @@ impl VadePlugin for VadeSidetree {
                     serde_json::to_string(&delta)?,
                     base64::STANDARD_NO_PAD,
                 ));
-                
+
                 map.insert("type", &operation_type);
                 map.insert("signed_data", &signed);
                 map.insert("did_suffix", &did);
