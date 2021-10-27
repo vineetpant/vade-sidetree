@@ -267,6 +267,7 @@ mod tests {
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
 
         assert_eq!(result.is_ok(), true);
+        
         Ok(())
     }
 
@@ -301,6 +302,7 @@ mod tests {
             resolve_result.did_document.id,
             create_response.did.did_document.id
         );
+
         Ok(())
     }
 
@@ -366,6 +368,7 @@ mod tests {
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(resolve_result.did_document.key_agreement.len(), 2);
+
         Ok(())
     }
 
@@ -421,6 +424,7 @@ mod tests {
         println!("did update result: {}", &respone);
 
         assert_eq!(result.is_ok(), true);
+
         Ok(())
     }
 
@@ -493,6 +497,7 @@ mod tests {
             .ok_or("No Services defined")?;
         assert_eq!(did_document_services.len(), 1);
         assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
+
         Ok(())
     }
 
@@ -610,6 +615,7 @@ mod tests {
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(resolve_result.did_document.service.is_none(), true);
+
         Ok(())
     }
 
@@ -708,6 +714,7 @@ mod tests {
         assert_eq!(resolve_result.did_document.key_agreement[0].id, "#doc_key");
 
         assert_eq!(result.is_ok(), true);
+
         Ok(())
     }
 

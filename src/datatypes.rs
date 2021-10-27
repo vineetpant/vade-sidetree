@@ -11,7 +11,6 @@ pub enum UpdateType {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationRequestGenerated {
     pub r#type: String,
     pub suffix_data: SuffixData,
@@ -82,7 +81,6 @@ pub struct Service {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct DidUpdatePayload {
     pub update_type: UpdateType,
     pub update_key: Option<JsonWebKey>,
@@ -93,7 +91,6 @@ pub struct DidUpdatePayload {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct DidCreateResponse {
     pub update_key: JsonWebKey,
     pub recovery_key: JsonWebKey,

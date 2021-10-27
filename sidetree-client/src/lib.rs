@@ -3,14 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct Delta {
     pub patches: Vec<Patch>,
     pub update_commitment: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct SuffixData {
     pub delta_hash: String,
     pub recovery_commitment: String,
@@ -19,7 +17,6 @@ pub struct SuffixData {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct SignedUpdateDataPayload {
     pub delta_hash: String,
     pub update_key: JsonWebKey,
@@ -33,7 +30,6 @@ pub struct SignedRecoveryDataPayload {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct SignedDeactivateDataPayload {
     pub did_suffix: String,
     pub recovery_key: JsonWebKey,

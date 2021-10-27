@@ -5,10 +5,7 @@ use crate::{
     SuffixData,
 };
 use crate::{
-    Error,
-    ReplaceDocument,
-    SignedDeactivateDataPayload,
-    SignedRecoveryDataPayload,
+    Error, ReplaceDocument, SignedDeactivateDataPayload, SignedRecoveryDataPayload,
     SignedUpdateDataPayload,
 };
 use secp256k1::SecretKey;
@@ -24,7 +21,6 @@ pub enum Operation {
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationInput {
     pub public_keys: Option<Vec<PublicKey>>,
     pub services: Option<Vec<Service>>,
@@ -58,7 +54,6 @@ impl OperationInput {
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct UpdateOperationInput {
     pub did_suffix: String,
     pub patches: Vec<Patch>,
@@ -92,7 +87,6 @@ impl UpdateOperationInput {
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct RecoverOperationInput {
     pub did_suffix: String,
     pub patches: Vec<Patch>,
@@ -132,7 +126,6 @@ impl RecoverOperationInput {
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct DeactivateOperationInput {
     pub did_suffix: String,
     pub recover_key: JsonWebKey,
@@ -154,7 +147,6 @@ impl DeactivateOperationInput {
 }
 
 #[derive(Serialize, Debug, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
     pub operation_request: Operation,
     pub did_suffix: String,
@@ -164,7 +156,6 @@ pub struct OperationOutput {
 }
 
 #[derive(Serialize, Debug, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct UpdateOperationOutput {
     pub operation_request: Operation,
 }

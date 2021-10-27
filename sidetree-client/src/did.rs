@@ -6,7 +6,6 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct Document {
     pub public_keys: Vec<PublicKey>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -14,7 +13,6 @@ pub struct Document {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct PublicKey {
     pub id: String,
     #[serde(rename = "type")]
@@ -26,7 +24,6 @@ pub struct PublicKey {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct JsonWebKey {
     #[serde(rename = "kty")]
     pub key_type: String,
@@ -39,7 +36,6 @@ pub struct JsonWebKey {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct Service {
     pub id: String,
     #[serde(rename = "type")]
