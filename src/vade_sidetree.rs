@@ -20,7 +20,6 @@ use crate::datatypes::*;
 use async_trait::async_trait;
 use base64::encode_config;
 use sidetree_client::{
-    did::JsonWebKey,
     operations::{self, DeactivateOperationInput, Operation},
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
@@ -28,7 +27,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use vade::{VadePlugin, VadePluginResultValue};
 
-const DEFAULT_URL: &str = "http://localhost:3000/1.0/";
+const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
 const EVAN_METHOD: &str = "did:evan";
 
 /// Sidetree Rest API url
@@ -267,7 +266,7 @@ mod tests {
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
 
         assert_eq!(result.is_ok(), true);
-        
+
         Ok(())
     }
 
