@@ -113,12 +113,12 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did` - DID to update data for
-    /// * `options` - serialized object of JsonWebKey, (required only for recovery and deactivate),
+    /// * `_options` - for sidetree implementation options are not required, so can be left empty,
     /// * `payload` - serialized object of DidUpdatePayload
     async fn did_update(
         &mut self,
         did: &str,
-        options: &str,
+        _options: &str,
         payload: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
         if !did.starts_with(EVAN_METHOD) {
