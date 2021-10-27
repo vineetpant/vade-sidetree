@@ -5,7 +5,10 @@ use crate::{
     SuffixData,
 };
 use crate::{
-    Error, ReplaceDocument, SignedDeactivateDataPayload, SignedRecoveryDataPayload,
+    Error,
+    ReplaceDocument,
+    SignedDeactivateDataPayload,
+    SignedRecoveryDataPayload,
     SignedUpdateDataPayload,
 };
 use secp256k1::SecretKey;

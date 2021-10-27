@@ -26,7 +26,6 @@ pub struct SignedUpdateDataPayload {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct SignedRecoveryDataPayload {
     pub delta_hash: String,
     pub recovery_key: JsonWebKey,

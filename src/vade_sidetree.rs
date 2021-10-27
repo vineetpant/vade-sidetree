@@ -203,7 +203,6 @@ impl VadePlugin for VadeSidetree {
                 map.insert("signed_data", &signed);
                 map.insert("did_suffix", &did);
                 map.insert("delta", &delta_base64);
-                println!("{:?}", map);
                 client.post(api_url).json(&map).send().await?.text().await?
             }
 
