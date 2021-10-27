@@ -21,7 +21,7 @@ use async_trait::async_trait;
 use base64::encode_config;
 use sidetree_client::{
     did::JsonWebKey,
-    operations::{self, Operation},
+    operations::{self, DeactivateOperationInput, Operation},
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
 use std::collections::HashMap;
@@ -175,10 +175,15 @@ impl VadePlugin for VadeSidetree {
             }
             UpdateType::Deactivate => {
                 operation_type.push_str("deactivate");
-                let recovery_key: JsonWebKey = serde_json::from_str(options)?;
-                let did_suffix = did.split(":").last().ok_or("did not valid")?.to_string();
+                let operation = DeactivateOperationInput::new()
+                    .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                    .with_recover_key(
+                        update_payload
+                            .recovery_key
+                            .ok_or("recovery_key not valid")?,
+                    );
 
-                operations::deactivate(did_suffix, recovery_key)
+                operations::deactivate(operation)
             }
         };
         let update_output = match update_operation {
@@ -729,13 +734,13 @@ mod tests {
             update_commitment: None,
             patches: None,
             recovery_commitment: None,
-            recovery_key: None,
+            recovery_key: Some(create_response.recovery_key),
         };
 
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &serde_json::to_string(&create_response.recovery_key)?,
+                "{}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;

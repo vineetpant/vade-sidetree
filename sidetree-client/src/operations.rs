@@ -128,6 +128,28 @@ impl RecoverOperationInput {
     }
 }
 
+#[derive(Serialize, Debug, Clone, Default)]
+#[serde(rename_all(serialize = "snake_case"))]
+pub struct DeactivateOperationInput {
+    pub did_suffix: String,
+    pub recover_key: JsonWebKey,
+}
+
+impl DeactivateOperationInput {
+    pub fn new() -> Self {
+        DeactivateOperationInput::default()
+    }
+    pub fn with_did_suffix(mut self, did_suffix: String) -> Self {
+        self.did_suffix = did_suffix;
+        self
+    }
+
+    pub fn with_recover_key(mut self, recover_key: JsonWebKey) -> Self {
+        self.recover_key = recover_key;
+        self
+    }
+}
+
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
@@ -403,11 +425,10 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
 }
 
 pub fn deactivate<'a>(
-    did_suffix: String,
-    recovery_key: JsonWebKey,
+    config: DeactivateOperationInput,
 ) -> Result<UpdateOperationOutput, Error<'a>> {
-    let mut public_key_x = decode(recovery_key.x).unwrap();
-    let mut public_key_y = decode(recovery_key.y).unwrap();
+    let mut public_key_x = decode(config.recover_key.x).unwrap();
+    let mut public_key_y = decode(config.recover_key.y).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
     full_pub_key.append(&mut vec![0x04]);
     full_pub_key.append(&mut public_key_x);
@@ -415,7 +436,7 @@ pub fn deactivate<'a>(
     let mut public_key_arr: [u8; 65] = [0; 65];
     public_key_arr.copy_from_slice(&full_pub_key[0..65]);
     let mut secret_key = None;
-    if let Some(d) = recovery_key.d {
+    if let Some(d) = config.recover_key.d {
         let secret_key_decoded = decode(d).unwrap();
         let mut secret_key_arr: [u8; 32] = Default::default();
         secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
@@ -433,7 +454,7 @@ pub fn deactivate<'a>(
 
     let signed_data_payload = SignedDeactivateDataPayload {
         recovery_key: recovery_key_public.clone(),
-        did_suffix: did_suffix.clone(),
+        did_suffix: config.did_suffix.clone(),
     };
 
     let protected_header = "{\"alg\":\"ES256K\"}";
@@ -464,7 +485,7 @@ pub fn deactivate<'a>(
         &mut message,
     );
 
-    let operation = Operation::Deactivate(did_suffix, message);
+    let operation = Operation::Deactivate(config.did_suffix, message);
 
     Ok(UpdateOperationOutput {
         operation_request: operation,
