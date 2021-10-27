@@ -312,11 +312,11 @@ mod tests {
 
         // first create a new DID on sidetree
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        assert!(result.is_ok());
 
-        let response = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => { return Err(Box::from("Unknown Result".to_string()))},
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -432,11 +432,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        assert!(result.is_ok());
 
-        let response = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => { return Err(Box::from("Unknown Result".to_string()))},
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -504,11 +504,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        assert!(result.is_ok());
 
-        let response = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => { return Err(Box::from("Unknown Result".to_string()))},
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -621,11 +621,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        assert!(result.is_ok());
 
-        let response = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => { return Err(Box::from("Unknown Result".to_string()))},
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -719,11 +719,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        assert!(result.is_ok());
 
-        let response = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => { return Err(Box::from("Unknown Result".to_string()))},
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
