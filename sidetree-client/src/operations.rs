@@ -88,6 +88,46 @@ impl UpdateOperationInput {
     }
 }
 
+#[derive(Serialize, Debug, Clone, Default)]
+#[serde(rename_all(serialize = "snake_case"))]
+pub struct RecoverOperationInput {
+    pub did_suffix: String,
+    pub patches: Vec<Patch>,
+    pub recover_key: JsonWebKey,
+    pub update_commitment: String,
+    pub recovery_commitment: String,
+}
+
+impl RecoverOperationInput {
+    pub fn new() -> Self {
+        RecoverOperationInput::default()
+    }
+    pub fn with_did_suffix(mut self, did_suffix: String) -> Self {
+        self.did_suffix = did_suffix;
+        self
+    }
+
+    pub fn with_patches(mut self, patches: Vec<Patch>) -> Self {
+        self.patches = patches;
+        self
+    }
+
+    pub fn with_recover_key(mut self, recover_key: JsonWebKey) -> Self {
+        self.recover_key = recover_key;
+        self
+    }
+
+    pub fn with_update_commitment(mut self, update_commitment: String) -> Self {
+        self.update_commitment = update_commitment;
+        self
+    }
+
+    pub fn with_recovery_commitment(mut self, recovery_commitment: String) -> Self {
+        self.recovery_commitment = recovery_commitment;
+        self
+    }
+}
+
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
@@ -283,12 +323,9 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
     })
 }
 
-pub fn recover<'a>(
-    config: UpdateOperationInput,
-    recovery_key: JsonWebKey,
-) -> Result<UpdateOperationOutput, Error<'a>> {
-    let mut public_key_x = decode(recovery_key.x).unwrap();
-    let mut public_key_y = decode(recovery_key.y).unwrap();
+pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
+    let mut public_key_x = decode(config.recover_key.x).unwrap();
+    let mut public_key_y = decode(config.recover_key.y).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
     full_pub_key.append(&mut vec![0x04]);
     full_pub_key.append(&mut public_key_x);
@@ -296,7 +333,7 @@ pub fn recover<'a>(
     let mut public_key_arr: [u8; 65] = [0; 65];
     public_key_arr.copy_from_slice(&full_pub_key[0..65]);
     let mut secret_key = None;
-    if let Some(d) = recovery_key.d {
+    if let Some(d) = config.recover_key.d {
         let secret_key_decoded = decode(d).unwrap();
         let mut secret_key_arr: [u8; 32] = Default::default();
         secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
@@ -327,10 +364,7 @@ pub fn recover<'a>(
     let signed_data_payload = SignedRecoveryDataPayload {
         delta_hash,
         recovery_key: recovery_key_public.clone(),
-        recovery_commitment: canonicalize_then_hash_then_encode(
-            &recovery_key_public,
-            crate::multihash::HashAlgorithm::Sha256,
-        ),
+        recovery_commitment: config.recovery_commitment,
     };
 
     let protected_header = "{\"alg\":\"ES256K\"}";

@@ -21,8 +21,8 @@ use async_trait::async_trait;
 use base64::encode_config;
 use sidetree_client::{
     did::JsonWebKey,
-    operations::UpdateOperationInput,
     operations::{self, Operation},
+    operations::{RecoverOperationInput, UpdateOperationInput},
 };
 use std::collections::HashMap;
 use std::error::Error;
@@ -135,24 +135,42 @@ impl VadePlugin for VadeSidetree {
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
         let update_operation = match update_payload.update_type {
             UpdateType::Update | UpdateType::Recovery => {
-                let operation = UpdateOperationInput::new()
-                    .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
-                    .with_patches(update_payload.patches.ok_or("patches not valid")?)
-                    .with_update_key(update_payload.update_key.ok_or("update_key not valid")?)
-                    .with_update_commitment(
-                        update_payload
-                            .update_commitment
-                            .ok_or("update_commitment not valid")?
-                            .to_string(),
-                    );
-
                 if update_payload.update_type == UpdateType::Update {
+                    let operation = UpdateOperationInput::new()
+                        .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                        .with_patches(update_payload.patches.ok_or("patches not valid")?)
+                        .with_update_key(update_payload.update_key.ok_or("update_key not valid")?)
+                        .with_update_commitment(
+                            update_payload
+                                .update_commitment
+                                .ok_or("update_commitment not valid")?
+                                .to_string(),
+                        );
                     operation_type.push_str("update");
                     operations::update(operation)
                 } else {
-                    let recovery_key: JsonWebKey = serde_json::from_str(options)?;
+                    let operation = RecoverOperationInput::new()
+                        .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
+                        .with_patches(update_payload.patches.ok_or("patches not valid")?)
+                        .with_recover_key(
+                            update_payload
+                                .recovery_key
+                                .ok_or("recovery_key not valid")?,
+                        )
+                        .with_recovery_commitment(
+                            update_payload
+                                .recovery_commitment
+                                .ok_or("recovery_commitment not valid")?
+                                .to_string(),
+                        )
+                        .with_update_commitment(
+                            update_payload
+                                .update_commitment
+                                .ok_or("update_commitment not valid")?
+                                .to_string(),
+                        );
                     operation_type.push_str("recover");
-                    operations::recover(operation, recovery_key)
+                    operations::recover(operation)
                 }
             }
             UpdateType::Deactivate => {
@@ -180,7 +198,7 @@ impl VadePlugin for VadeSidetree {
                 map.insert("signed_data", &signed);
                 map.insert("did_suffix", &did);
                 map.insert("delta", &delta_base64);
-
+                println!("{:?}", map);
                 client.post(api_url).json(&map).send().await?.text().await?
             }
 
@@ -314,6 +332,8 @@ mod tests {
             update_key: Some(create_response.update_key),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
+            recovery_commitment: None,
+            recovery_key: None,
         };
         let result = did_handler
             .did_update(
@@ -373,6 +393,8 @@ mod tests {
             update_key: Some(create_response.update_key),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
+            recovery_commitment: None,
+            recovery_key: None,
         };
 
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
@@ -436,6 +458,8 @@ mod tests {
             update_key: Some(create_response.update_key),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
+            recovery_commitment: None,
+            recovery_key: None,
         };
 
         let result = did_handler
@@ -510,6 +534,8 @@ mod tests {
             update_key: Some(create_response.update_key),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
+            recovery_commitment: None,
+            recovery_key: None,
         };
 
         let result = did_handler
@@ -553,6 +579,8 @@ mod tests {
             update_key: Some((&update1_key_pair).into()),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
+            recovery_commitment: None,
+            recovery_key: None,
         };
 
         let result = did_handler
@@ -581,7 +609,6 @@ mod tests {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -615,42 +642,15 @@ mod tests {
             create_response.did.did_document.id
         );
 
-        // deactivate DID
-        let update_payload = DidUpdatePayload {
-            update_type: UpdateType::Deactivate,
-            update_key: None,
-            update_commitment: None,
-            patches: None,
-        };
-
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &serde_json::to_string(&create_response.recovery_key)?,
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
-
-        // after update, resolve and check if the DID is deactivated
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result.as_ref() {
-            Ok(VadePluginResultValue::Success(Some(value))) => value.to_string(),
-            Ok(_) => "Unknown Result".to_string(),
-            Err(e) => e.to_string(),
-        };
-
-        assert_eq!(did_resolve, "{\"status\":\"deactivated\"}");
-
         // try to recover DID
 
         let update1_key_pair = secp256k1::KeyPair::random();
         let mut update1_public_key: JsonWebKey = (&update1_key_pair).into();
         update1_public_key.d = None;
+
+        let recover1_key_pair = secp256k1::KeyPair::random();
+        let mut recover1_public_key: JsonWebKey = (&recover1_key_pair).into();
+        recover1_public_key.d = None;
 
         let patch: Patch = Patch::Replace(sidetree_client::ReplaceDocument {
             document: Document {
@@ -659,6 +659,11 @@ mod tests {
                 services: None,
             },
         });
+
+        let recovery_commitment = multihash::canonicalize_then_hash_then_encode(
+            &recover1_public_key,
+            multihash::HashAlgorithm::Sha256,
+        );
 
         let update_commitment = multihash::canonicalize_then_hash_then_encode(
             &update1_public_key,
@@ -670,12 +675,14 @@ mod tests {
             update_key: Some(update1_public_key),
             update_commitment: Some(update_commitment),
             patches: Some(vec![patch]),
+            recovery_commitment: Some(recovery_commitment),
+            recovery_key: Some(create_response.recovery_key),
         };
 
         let _result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &serde_json::to_string(&create_response.recovery_key)?,
+                "{}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -692,10 +699,9 @@ mod tests {
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(
-            resolve_result.did_document.id,
-            create_response.did.did_document.id
-        );
+
+        // check if the replaced key is now in the document
+        assert_eq!(resolve_result.did_document.key_agreement[0].id, "#doc_key");
 
         assert_eq!(result.is_ok(), true);
         Ok(())
@@ -722,6 +728,8 @@ mod tests {
             update_key: None,
             update_commitment: None,
             patches: None,
+            recovery_commitment: None,
+            recovery_key: None,
         };
 
         let result = did_handler

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sidetree_client::{did::JsonWebKey, Delta, SuffixData, Patch};
+use sidetree_client::{did::JsonWebKey, Delta, Patch, SuffixData};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
@@ -81,13 +81,14 @@ pub struct Service {
     pub service_endpoint: String,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "snake_case"))]
 pub struct DidUpdatePayload {
     pub update_type: UpdateType,
     pub update_key: Option<JsonWebKey>,
+    pub recovery_key: Option<JsonWebKey>,
     pub update_commitment: Option<String>,
+    pub recovery_commitment: Option<String>,
     pub patches: Option<Vec<Patch>>,
 }
 
