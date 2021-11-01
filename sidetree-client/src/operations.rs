@@ -4,7 +4,10 @@ use crate::{
     did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
     SuffixData,
 };
-use crate::{Error, ReplaceDocument, SignedUpdateDataPayload};
+use crate::{
+    Error, ReplaceDocument, SignedDeactivateDataPayload, SignedRecoveryDataPayload,
+    SignedUpdateDataPayload,
+};
 use secp256k1::SecretKey;
 use serde::{ser::SerializeMap, Serialize};
 use sha2::{Digest, Sha256};
@@ -13,10 +16,11 @@ use sha2::{Digest, Sha256};
 pub enum Operation {
     Create(SuffixData, Delta),
     Update(String, Delta, String),
+    Recover(String, Delta, String),
+    Deactivate(String, String),
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationInput {
     pub public_keys: Option<Vec<PublicKey>>,
     pub services: Option<Vec<Service>>,
@@ -50,7 +54,6 @@ impl OperationInput {
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct UpdateOperationInput {
     pub did_suffix: String,
     pub patches: Vec<Patch>,
@@ -83,8 +86,67 @@ impl UpdateOperationInput {
     }
 }
 
+#[derive(Serialize, Debug, Clone, Default)]
+pub struct RecoverOperationInput {
+    pub did_suffix: String,
+    pub patches: Vec<Patch>,
+    pub recover_key: JsonWebKey,
+    pub update_commitment: String,
+    pub recovery_commitment: String,
+}
+
+impl RecoverOperationInput {
+    pub fn new() -> Self {
+        RecoverOperationInput::default()
+    }
+    pub fn with_did_suffix(mut self, did_suffix: String) -> Self {
+        self.did_suffix = did_suffix;
+        self
+    }
+
+    pub fn with_patches(mut self, patches: Vec<Patch>) -> Self {
+        self.patches = patches;
+        self
+    }
+
+    pub fn with_recover_key(mut self, recover_key: JsonWebKey) -> Self {
+        self.recover_key = recover_key;
+        self
+    }
+
+    pub fn with_update_commitment(mut self, update_commitment: String) -> Self {
+        self.update_commitment = update_commitment;
+        self
+    }
+
+    pub fn with_recovery_commitment(mut self, recovery_commitment: String) -> Self {
+        self.recovery_commitment = recovery_commitment;
+        self
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Default)]
+pub struct DeactivateOperationInput {
+    pub did_suffix: String,
+    pub recover_key: JsonWebKey,
+}
+
+impl DeactivateOperationInput {
+    pub fn new() -> Self {
+        DeactivateOperationInput::default()
+    }
+    pub fn with_did_suffix(mut self, did_suffix: String) -> Self {
+        self.did_suffix = did_suffix;
+        self
+    }
+
+    pub fn with_recover_key(mut self, recover_key: JsonWebKey) -> Self {
+        self.recover_key = recover_key;
+        self
+    }
+}
+
 #[derive(Serialize, Debug, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct OperationOutput {
     pub operation_request: Operation,
     pub did_suffix: String,
@@ -94,7 +156,6 @@ pub struct OperationOutput {
 }
 
 #[derive(Serialize, Debug, Clone)]
-#[serde(rename_all(serialize = "snake_case"))]
 pub struct UpdateOperationOutput {
     pub operation_request: Operation,
 }
@@ -116,6 +177,17 @@ impl Serialize for Operation {
                 map.serialize_entry("type", "update")?;
                 map.serialize_entry("did_suffix", did_suffix)?;
                 map.serialize_entry("delta", delta)?;
+                map.serialize_entry("signed_data", signed_data)?;
+            }
+            Operation::Recover(did_suffix, delta, signed_data) => {
+                map.serialize_entry("type", "update")?;
+                map.serialize_entry("did_suffix", did_suffix)?;
+                map.serialize_entry("delta", delta)?;
+                map.serialize_entry("signed_data", signed_data)?;
+            }
+            Operation::Deactivate(did_suffix, signed_data) => {
+                map.serialize_entry("type", "deactivate")?;
+                map.serialize_entry("did_suffix", did_suffix)?;
                 map.serialize_entry("signed_data", signed_data)?;
             }
         }
@@ -261,6 +333,153 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
     );
 
     let operation = Operation::Update(config.did_suffix, delta, message);
+
+    Ok(UpdateOperationOutput {
+        operation_request: operation,
+    })
+}
+
+pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
+    let mut public_key_x = decode(config.recover_key.x).unwrap();
+    let mut public_key_y = decode(config.recover_key.y).unwrap();
+    let mut full_pub_key = Vec::<u8>::new();
+    full_pub_key.append(&mut vec![0x04]);
+    full_pub_key.append(&mut public_key_x);
+    full_pub_key.append(&mut public_key_y);
+    let mut public_key_arr: [u8; 65] = [0; 65];
+    public_key_arr.copy_from_slice(&full_pub_key[0..65]);
+    let mut secret_key = None;
+    if let Some(d) = config.recover_key.d {
+        let secret_key_decoded = decode(d).unwrap();
+        let mut secret_key_arr: [u8; 32] = Default::default();
+        secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
+        secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
+    }
+    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+
+    let recovery_keypair = KeyPair {
+        public_key,
+        secret_key,
+    };
+
+    let mut recovery_key_public: JsonWebKey = (&recovery_keypair).into();
+    recovery_key_public.d = None;
+
+    let delta = Delta {
+        update_commitment: config.update_commitment,
+        patches: config.patches,
+    };
+
+    let delta_hash = hash_then_encode(
+        serde_json::to_string(&delta)
+            .map_err(|_| Error::MissingField("Failed to canonicalize"))?
+            .as_bytes(),
+        crate::multihash::HashAlgorithm::Sha256,
+    );
+
+    let signed_data_payload = SignedRecoveryDataPayload {
+        delta_hash,
+        recovery_key: recovery_key_public.clone(),
+        recovery_commitment: config.recovery_commitment,
+    };
+
+    let protected_header = "{\"alg\":\"ES256K\"}";
+    let mut message = String::new();
+    message.push_str(&base64::encode_config(
+        protected_header,
+        base64::URL_SAFE_NO_PAD,
+    ));
+    message.push_str(".");
+    message.push_str(&base64::encode_config(
+        serde_json::to_string(&signed_data_payload).unwrap(),
+        base64::URL_SAFE_NO_PAD,
+    ));
+
+    let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(message.clone());
+
+    // read hash digest and consume hasher
+    let message_hash = hasher.finalize();
+
+    let (signed_data, _) = recovery_keypair.sign(message_hash.as_slice());
+
+    message.push_str(".");
+    base64::encode_config_buf(
+        signed_data.serialize(),
+        base64::URL_SAFE_NO_PAD,
+        &mut message,
+    );
+
+    let operation = Operation::Recover(config.did_suffix, delta, message);
+
+    Ok(UpdateOperationOutput {
+        operation_request: operation,
+    })
+}
+
+pub fn deactivate<'a>(
+    config: DeactivateOperationInput,
+) -> Result<UpdateOperationOutput, Error<'a>> {
+    let mut public_key_x = decode(config.recover_key.x).unwrap();
+    let mut public_key_y = decode(config.recover_key.y).unwrap();
+    let mut full_pub_key = Vec::<u8>::new();
+    full_pub_key.append(&mut vec![0x04]);
+    full_pub_key.append(&mut public_key_x);
+    full_pub_key.append(&mut public_key_y);
+    let mut public_key_arr: [u8; 65] = [0; 65];
+    public_key_arr.copy_from_slice(&full_pub_key[0..65]);
+    let mut secret_key = None;
+    if let Some(d) = config.recover_key.d {
+        let secret_key_decoded = decode(d).unwrap();
+        let mut secret_key_arr: [u8; 32] = Default::default();
+        secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
+        secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
+    }
+    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+
+    let recovery_keypair = KeyPair {
+        public_key,
+        secret_key,
+    };
+
+    let mut recovery_key_public: JsonWebKey = (&recovery_keypair).into();
+    recovery_key_public.d = None;
+
+    let signed_data_payload = SignedDeactivateDataPayload {
+        recovery_key: recovery_key_public.clone(),
+        did_suffix: config.did_suffix.clone(),
+    };
+
+    let protected_header = "{\"alg\":\"ES256K\"}";
+    let mut message = String::new();
+    message.push_str(&base64::encode_config(
+        protected_header,
+        base64::URL_SAFE_NO_PAD,
+    ));
+    message.push_str(".");
+    message.push_str(&base64::encode_config(
+        serde_json::to_string(&signed_data_payload).unwrap(),
+        base64::URL_SAFE_NO_PAD,
+    ));
+
+    let mut hasher = Sha256::new();
+    // write input message
+    hasher.update(message.clone());
+
+    // read hash digest and consume hasher
+    let message_hash = hasher.finalize();
+
+    let (signed_data, _) = recovery_keypair.sign(message_hash.as_slice());
+
+    message.push_str(".");
+    base64::encode_config_buf(
+        signed_data.serialize(),
+        base64::URL_SAFE_NO_PAD,
+        &mut message,
+    );
+
+    let operation = Operation::Deactivate(config.did_suffix, message);
 
     Ok(UpdateOperationOutput {
         operation_request: operation,
