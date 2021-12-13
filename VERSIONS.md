@@ -5,6 +5,7 @@
 ### Features
 
 ### Fixes
+- allow resolval ony for not substrate based dids
 
 ### Deprecations
 
