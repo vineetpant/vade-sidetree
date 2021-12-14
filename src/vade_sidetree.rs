@@ -13,12 +13,13 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 */
-
+extern crate regex;
 extern crate vade;
 
 use crate::datatypes::*;
 use async_trait::async_trait;
 use base64::encode_config;
+use regex::Regex;
 use sidetree_client::{
     operations::{self, DeactivateOperationInput, Operation},
     operations::{RecoverOperationInput, UpdateOperationInput},
@@ -29,6 +30,7 @@ use vade::{VadePlugin, VadePluginResultValue};
 
 const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
 const EVAN_METHOD: &str = "did:evan";
+const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
 
 /// Sidetree Rest API url
 pub struct VadeSidetree {
@@ -228,6 +230,12 @@ impl VadePlugin for VadeSidetree {
         did_id: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
         if !did_id.starts_with(EVAN_METHOD) {
+            return Ok(VadePluginResultValue::Ignored);
+        }
+        let re = Regex::new(METHOD_REGEX)?;
+        let is_ethereum_did = re.is_match(&did_id);
+
+        if is_ethereum_did {
             return Ok(VadePluginResultValue::Ignored);
         }
 
