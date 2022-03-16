@@ -6,9 +6,13 @@
 
 ### Fixes
 
-- allow resolval only for Sidetree based DIDs
-
 ### Deprecations
+
+## v0.0.2
+
+### Fixes
+
+- allow resolval only for Sidetree based DIDs
 
 ## v0.0.1
 
