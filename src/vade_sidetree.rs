@@ -33,11 +33,6 @@ const EVAN_METHOD: &str = "did:evan";
 const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
 const DID_SIDETREE: &str = "sidetree";
 
-/// Sidetree Rest API url
-pub struct VadeSidetree {
-    pub config: SideTreeConfig,
-}
-
 macro_rules! parse {
     ($data:expr, $type_name:expr) => {{
         serde_json::from_str($data)
@@ -53,6 +48,11 @@ macro_rules! ignore_unrelated {
             _ => return Ok(VadePluginResultValue::Ignored),
         };
     }};
+}
+
+/// Sidetree Rest API url
+pub struct VadeSidetree {
+    pub config: SideTreeConfig,
 }
 
 impl VadeSidetree {
