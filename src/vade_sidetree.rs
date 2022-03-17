@@ -31,10 +31,28 @@ use vade::{VadePlugin, VadePluginResultValue};
 const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
 const EVAN_METHOD: &str = "did:evan";
 const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
+const DID_SIDETREE: &str = "sidetree";
 
 /// Sidetree Rest API url
 pub struct VadeSidetree {
     pub config: SideTreeConfig,
+}
+
+macro_rules! parse {
+    ($data:expr, $type_name:expr) => {{
+        serde_json::from_str($data)
+            .map_err(|e| format!("{} when parsing {} {}", &e, $type_name, $data))?
+    }};
+}
+
+macro_rules! ignore_unrelated {
+    ($options:expr) => {{
+        let type_options: TypeOptions = parse!($options, "options");
+        match type_options.r#type.as_deref() {
+            Some(DID_SIDETREE) => (),
+            _ => return Ok(VadePluginResultValue::Ignored),
+        };
+    }};
 }
 
 impl VadeSidetree {
@@ -61,14 +79,16 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did_method` - did method to cater to, usually "did:evan"
-    /// * `_options` - for sidetree implementation options are not required, so can be left empty
+    /// * `options` - serialized object of TypeOptions
     /// * `_payload` - no payload required, so can be left empty
     async fn did_create(
         &mut self,
         did_method: &str,
-        _options: &str,
+        options: &str,
         _payload: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
+        ignore_unrelated!(options);
+
         if !did_method.starts_with(EVAN_METHOD) {
             return Ok(VadePluginResultValue::Ignored);
         }
@@ -114,14 +134,16 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did` - DID to update data for
-    /// * `_options` - for sidetree implementation options are not required, so can be left empty,
+    /// * `options` - serialized object of TypeOptions
     /// * `payload` - serialized object of DidUpdatePayload
     async fn did_update(
         &mut self,
         did: &str,
-        _options: &str,
+        options: &str,
         payload: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
+        ignore_unrelated!(options);
+
         if !did.starts_with(EVAN_METHOD) {
             return Ok(VadePluginResultValue::Ignored);
         }
@@ -271,7 +293,7 @@ mod tests {
     async fn can_create_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
-        let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        let result = did_handler.did_create("did:evan", "{\"type\":\"sidetree\"}", "{}").await;
 
         assert_eq!(result.is_ok(), true);
 
@@ -317,7 +339,7 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
         // first create a new DID on sidetree
-        let result = did_handler.did_create("did:evan", "{}", "{}").await;
+        let result = did_handler.did_create("did:evan", "{\"type\":\"sidetree\"}", "{}").await;
         assert!(result.is_ok());
 
         let response = match result? {
@@ -349,7 +371,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{}",
+                &"{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -414,7 +436,7 @@ mod tests {
                     "did:evan:{}",
                     "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
                 ),
-                &"{}",
+                &"{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -474,7 +496,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{}",
+                &"{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -551,7 +573,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{}",
+                &"{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -595,7 +617,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{}",
+                &"{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -692,7 +714,7 @@ mod tests {
         let _result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                "{}",
+                "{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -744,7 +766,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                "{}",
+                "{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
