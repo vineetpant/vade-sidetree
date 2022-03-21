@@ -96,3 +96,10 @@ pub struct DidCreateResponse {
     pub recovery_key: JsonWebKey,
     pub did: SidetreeDidDocument,
 }
+
+/// Message passed to vade containing the desired did implementation.
+/// Does not perform action if type does not indicate did type.
+#[derive(Serialize, Deserialize)]
+pub struct TypeOptions {
+    pub r#type: Option<String>,
+}

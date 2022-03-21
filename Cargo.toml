@@ -28,3 +28,4 @@ vade = { git = "https://git.slock.it/equs/interop/vade/vade.git", branch = "deve
 
 [dev-dependencies]
 tokio = { version = "=1.7.1", features = ["macros", "rt-multi-thread"] }
+serial_test = "0.5.1"
