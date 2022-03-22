@@ -10,6 +10,12 @@
 
 ## v0.0.2
 
+### Features
+
+- Add type options to did_create and did_update
+
+## v0.0.2
+
 ### Fixes
 
 - allow resolval only for Sidetree based DIDs

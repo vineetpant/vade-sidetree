@@ -1,34 +1,5 @@
 image: rust:latest
 
-services:
-  - name: trufflesuite/ganache-cli:latest
-    alias: ganache
-    command:
-      [
-        'ganache-cli',
-        '-h',
-        '0.0.0.0',
-        '-m',
-        'beauty satoshi orphan shock since budget make diagram almost caution cactus blouse',
-      ]
-  - name: ipfs/go-ipfs:latest
-    alias: ipfs
-  - name: mongo:latest
-    alias: mongo
-  - name: docker.slock.it/equs/interop/sidetree-node:latest
-    alias: sidetree
-    command: ["/bin/sh", "-c", "sleep 20 && yarn start"]
-    entrypoint: [""]
-
-variables:
-  SIDETREE_API_URL: http://sidetree:3000/1.0/
-  ETH_RPC: http://ganache:8545
-  MNEMONIC: beauty satoshi orphan shock since budget make diagram almost caution cactus blouse
-  WRITE_TO_CAS_AND_BLOCKCHAIN_AFTER_EVERY_OPERATION: "true"
-  APPLICATION_WALLET_PRIVATE_KEY: ""
-  FF_NETWORK_PER_BUILD: 1
-  ANCHOR_CONTRACT_ADDRESS: ""
-
 stages:
   - build
   - test_unit
