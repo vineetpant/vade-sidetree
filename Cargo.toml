@@ -24,7 +24,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sidetree-client = { path = "./sidetree-client" }
 sha2 = "0.9.5"
-vade = { git = "https://git.slock.it/equs/interop/vade/vade.git", branch = "develop", version = "0.1.0" }
+vade = "0.1.0"
 
 [dev-dependencies]
 tokio = { version = "=1.7.1", features = ["macros", "rt-multi-thread"] }
