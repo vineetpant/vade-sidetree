@@ -1638,7 +1638,7 @@ dependencies = [
 [[package]]
 name = "vade"
 version = "0.1.0"
-source = "git+https://git.slock.it/equs/interop/vade/vade.git?branch=develop#b97a4f5be3273b9867b34a9132fdda5cec822310"
+source = "git+https://github.com/vineetpant/vade.git?branch=develop#5b513f4ba41ea67d07cee947cea2d5321f25fc24"
 dependencies = [
  "async-trait",
  "env_logger",
