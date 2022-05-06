@@ -20,7 +20,7 @@ use crate::datatypes::*;
 use async_trait::async_trait;
 use base64::encode_config;
 use regex::Regex;
-use sidetree_client::{
+use vade_sidetree_client::{
     operations::{self, DeactivateOperationInput, Operation},
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
@@ -276,7 +276,7 @@ impl VadePlugin for VadeSidetree {
 mod tests {
     use super::*;
     use serial_test::serial;
-    use sidetree_client::{
+    use vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
         multihash, secp256k1, Patch,
     };
@@ -371,7 +371,7 @@ mod tests {
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
-        let patch: Patch = Patch::AddPublicKeys(sidetree_client::AddPublicKeys {
+        let patch: Patch = Patch::AddPublicKeys(vade_sidetree_client::AddPublicKeys {
             public_keys: vec![update_key.clone()],
         });
 
@@ -439,7 +439,7 @@ mod tests {
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
 
-        let patch: Patch = Patch::RemovePublicKeys(sidetree_client::RemovePublicKeys {
+        let patch: Patch = Patch::RemovePublicKeys(vade_sidetree_client::RemovePublicKeys {
             ids: vec!["update_key".to_string()],
         });
 
@@ -505,7 +505,7 @@ mod tests {
             endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServiceEndpoints(sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServiceEndpoints(vade_sidetree_client::AddServices {
             service_endpoints: vec![service],
         });
 
@@ -587,7 +587,7 @@ mod tests {
             endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServiceEndpoints(sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServiceEndpoints(vade_sidetree_client::AddServices {
             service_endpoints: vec![service],
         });
 
@@ -640,7 +640,7 @@ mod tests {
         assert_eq!(did_document_services.len(), 1);
         assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
 
-        let patch: Patch = Patch::RemoveServiceEndpoints(sidetree_client::RemoveServices {
+        let patch: Patch = Patch::RemoveServiceEndpoints(vade_sidetree_client::RemoveServices {
             ids: vec!["sds".to_string()],
         });
 
@@ -735,7 +735,7 @@ mod tests {
         let mut recover1_public_key: JsonWebKey = (&recover1_key_pair).into();
         recover1_public_key.d = None;
 
-        let patch: Patch = Patch::Replace(sidetree_client::ReplaceDocument {
+        let patch: Patch = Patch::Replace(vade_sidetree_client::ReplaceDocument {
             document: Document {
                 public_keys: vec![update1_key_pair
                     .to_public_key("doc_key".into(), Some([Purpose::Agreement].to_vec()))],

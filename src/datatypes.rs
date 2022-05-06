@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sidetree_client::{did::JsonWebKey, Delta, Patch, SuffixData};
+use vade_sidetree_client::{did::JsonWebKey, Delta, Patch, SuffixData};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
