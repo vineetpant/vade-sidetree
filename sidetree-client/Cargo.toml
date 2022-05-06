@@ -1,6 +1,6 @@
 [package]
 name = "sidetree-client"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Tomislav Markovski <tomislav@trinsic.id>"]
 edition = "2018"
 description = "Client library for managing DID operations for Sidetree API services"
