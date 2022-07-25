@@ -18,7 +18,7 @@ extern crate vade;
 
 use crate::datatypes::*;
 #[cfg(feature = "sdk")]
-use crate::in3_request_list::ResolveHttpRequest;
+use crate::in3_request_list::{send_request, ResolveHttpRequest};
 use async_trait::async_trait;
 use base64::encode_config;
 use regex::Regex;
@@ -26,10 +26,7 @@ use regex::Regex;
 use reqwest::Client;
 use std::collections::HashMap;
 use std::error::Error;
-#[cfg(feature = "sdk")]
-use std::ffi::{CStr, CString};
-#[cfg(feature = "sdk")]
-use std::os::raw::c_char;
+
 #[cfg(feature = "sdk")]
 use std::os::raw::c_void;
 use vade::{VadePlugin, VadePluginResultValue};
@@ -137,37 +134,10 @@ impl VadePlugin for VadeSidetree {
 
         #[cfg(feature = "sdk")]
         let resolve_http_request = self.config.resolve_http_request;
-        
+
         cfg_if::cfg_if! {
             if #[cfg(feature = "sdk")]{
-                    // If compiled for sdk integration, get_http_response function will be called
-                    let url = CString::new(api_url.to_string())?;
-                    let url = url.as_ptr();
-    
-                    let method = CString::new("POST")?;
-                    let method = method.as_ptr();
-    
-                    let path = CString::new("")?;
-                    let path = path.as_ptr();
-    
-                    let payload = serde_json::to_string(&map)?;
-                    let payload = CString::new(payload)?;
-                    let payload = payload.as_ptr();
-    
-                    let mut res: *mut c_char = std::ptr::null_mut();
-    
-                    let error_code = (resolve_http_request)(
-                        request_pointer,
-                        url,
-                        method,
-                        path,
-                        payload,
-                        &mut res as *mut *mut c_char);
-
-                    if error_code < 0 {
-                        return Err(Box::from(format!("{}", error_code)));
-                    }
-                    let res = unsafe { CStr::from_ptr(res).to_string_lossy().into_owned() };
+                    let res = send_request(api_url, "POST".to_string(), Some(map), request_pointer, resolve_http_request)?;
                     return Ok(VadePluginResultValue::Success(Some(res.to_string())));
             } else {
                 let client = Client::new();
@@ -206,7 +176,8 @@ impl VadePlugin for VadeSidetree {
 
         let mut operation_type: String = String::new();
         let mut api_url = self.config.sidetree_rest_api_url.clone();
-        let mut map = HashMap::new();
+        let mut map: HashMap<&str, &str> = HashMap::new();
+        #[cfg(not(feature = "sdk"))]
         let client = Client::new();
 
         #[cfg(feature = "sdk")]
@@ -291,40 +262,11 @@ impl VadePlugin for VadeSidetree {
 
                 cfg_if::cfg_if! {
                     if #[cfg(feature = "sdk")]{
-                            // If compiled for sdk integration, get_http_response function will be called
-                            let url = CString::new(api_url.to_string())?;
-                            let url = url.as_ptr();
-            
-                            let method = CString::new("POST")?;
-                            let method = method.as_ptr();
-            
-                            let path = CString::new("")?;
-                            let path = path.as_ptr();
-            
-                            let payload = serde_json::to_string(&map)?;
-                            let payload = CString::new(payload)?;
-                            let payload = payload.as_ptr();
-            
-                            let mut res: *mut c_char = std::ptr::null_mut();
-            
-                            let error_code = (resolve_http_request)(
-                                request_pointer,
-                                url,
-                                method,
-                                path,
-                                payload,
-                                &mut res as *mut *mut c_char);
-        
-                            if error_code < 0 {
-                                return Err(Box::from(format!("{}", error_code)));
-                            }
-                            let res = unsafe { CStr::from_ptr(res).to_string_lossy().into_owned() };
-                            res
+                        send_request(api_url, "POST".to_string(), Some(map), request_pointer, resolve_http_request)?
                     } else {
                         client.post(api_url).json(&map).send().await?.text().await?
                     }
                 }
-                
             }
 
             Operation::Deactivate(did, signed) => {
@@ -332,7 +274,13 @@ impl VadePlugin for VadeSidetree {
                 map.insert("signed_data", &signed);
                 map.insert("did_suffix", &did);
 
-                client.post(api_url).json(&map).send().await?.text().await?
+                cfg_if::cfg_if! {
+                    if #[cfg(feature = "sdk")]{
+                        send_request(api_url, "POST".to_string(), Some(map), request_pointer, resolve_http_request)?
+                    } else {
+                        client.post(api_url).json(&map).send().await?.text().await?
+                    }
+                }
             }
             _ => return Err(Box::from("Invalid operation")),
         };
@@ -369,10 +317,16 @@ impl VadePlugin for VadeSidetree {
         api_url.push_str("identifiers/");
         api_url.push_str(did_id);
 
-        let client = Client::new();
-        let res = client.get(api_url).send().await?.text().await?;
-
-        Ok(VadePluginResultValue::Success(Some(res)))
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "sdk")]{
+                let res = send_request(api_url, "GET".to_string(), None, request_pointer, resolve_http_request)?;
+                Ok(VadePluginResultValue::Success(Some(res)))
+            } else {
+                let client = Client::new();
+                let res = client.get(api_url).send().await?.text().await?;
+                Ok(VadePluginResultValue::Success(Some(res)))
+            }
+        }
     }
 }
 
