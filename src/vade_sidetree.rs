@@ -17,16 +17,23 @@ extern crate regex;
 extern crate vade;
 
 use crate::datatypes::*;
+#[cfg(feature = "sdk")]
+use crate::in3_request_list::{send_request, ResolveHttpRequest};
 use async_trait::async_trait;
 use base64::encode_config;
 use regex::Regex;
+#[cfg(not(feature = "sdk"))]
+use reqwest::Client;
+use std::collections::HashMap;
+use std::error::Error;
+
+#[cfg(feature = "sdk")]
+use std::os::raw::c_void;
+use vade::{VadePlugin, VadePluginResultValue};
 use vade_sidetree_client::{
     operations::{self, DeactivateOperationInput, Operation},
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
-use std::collections::HashMap;
-use std::error::Error;
-use vade::{VadePlugin, VadePluginResultValue};
 
 const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
 const EVAN_METHOD: &str = "did:evan";
@@ -57,12 +64,20 @@ pub struct VadeSidetree {
 
 impl VadeSidetree {
     /// Creates new instance of `VadeSidetree`.
-    pub fn new(sidetree_rest_api_url: Option<String>) -> VadeSidetree {
+    pub fn new(
+        #[cfg(feature = "sdk")] request_id: *const c_void,
+        #[cfg(feature = "sdk")] resolve_http_request: ResolveHttpRequest,
+        sidetree_rest_api_url: Option<String>,
+    ) -> VadeSidetree {
         // Setting default value for sidetree api url
         // If environment variable is found and it contains some value, it will replace default value
         let url = sidetree_rest_api_url.unwrap_or_else(|| DEFAULT_URL.to_string());
 
         let config = SideTreeConfig {
+            #[cfg(feature = "sdk")]
+            request_id,
+            #[cfg(feature = "sdk")]
+            resolve_http_request,
             sidetree_rest_api_url: url,
         };
         match env_logger::try_init() {
@@ -114,18 +129,29 @@ impl VadePlugin for VadeSidetree {
         map.insert("suffix_data", suffix_data_base64);
         map.insert("delta", delta_base64);
 
-        let client = reqwest::Client::new();
-        let res = client.post(api_url).json(&map).send().await?.text().await?;
+        #[cfg(feature = "sdk")]
+        let request_pointer = self.config.request_id.clone();
 
-        let response = DidCreateResponse {
-            update_key: create_result.update_key,
-            recovery_key: create_result.recovery_key,
-            did: serde_json::from_str(&res)?,
-        };
+        #[cfg(feature = "sdk")]
+        let resolve_http_request = self.config.resolve_http_request;
 
-        Ok(VadePluginResultValue::Success(Some(serde_json::to_string(
-            &response,
-        )?)))
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "sdk")]{
+                    let res = send_request(api_url, "POST".to_string(), Some(map), request_pointer, resolve_http_request)?;
+                    return Ok(VadePluginResultValue::Success(Some(res.to_string())));
+            } else {
+                let client = Client::new();
+                let res = client.post(api_url).json(&map).send().await?.text().await?;
+
+                let response = DidCreateResponse {
+                    update_key: create_result.update_key,
+                    recovery_key: create_result.recovery_key,
+                    did: serde_json::from_str(&res)?,
+                };
+
+                Ok(VadePluginResultValue::Success(Some(serde_json::to_string(&response)?)))
+            }
+        }
     }
 
     /// Updates data related to a DID. Updates are supported as per Sidetree documentation
@@ -150,8 +176,15 @@ impl VadePlugin for VadeSidetree {
 
         let mut operation_type: String = String::new();
         let mut api_url = self.config.sidetree_rest_api_url.clone();
-        let mut map = HashMap::new();
-        let client = reqwest::Client::new();
+        let mut map: HashMap<&str, &str> = HashMap::new();
+        #[cfg(not(feature = "sdk"))]
+        let client = Client::new();
+
+        #[cfg(feature = "sdk")]
+        let request_pointer = self.config.request_id.clone();
+
+        #[cfg(feature = "sdk")]
+        let resolve_http_request = self.config.resolve_http_request;
 
         api_url.push_str("operations");
 
@@ -226,7 +259,14 @@ impl VadePlugin for VadeSidetree {
                 map.insert("signed_data", &signed);
                 map.insert("did_suffix", &did);
                 map.insert("delta", &delta_base64);
-                client.post(api_url).json(&map).send().await?.text().await?
+
+                cfg_if::cfg_if! {
+                    if #[cfg(feature = "sdk")]{
+                        send_request(api_url, "POST".to_string(), Some(map), request_pointer, resolve_http_request)?
+                    } else {
+                        client.post(api_url).json(&map).send().await?.text().await?
+                    }
+                }
             }
 
             Operation::Deactivate(did, signed) => {
@@ -234,7 +274,13 @@ impl VadePlugin for VadeSidetree {
                 map.insert("signed_data", &signed);
                 map.insert("did_suffix", &did);
 
-                client.post(api_url).json(&map).send().await?.text().await?
+                cfg_if::cfg_if! {
+                    if #[cfg(feature = "sdk")]{
+                        send_request(api_url, "POST".to_string(), Some(map), request_pointer, resolve_http_request)?
+                    } else {
+                        client.post(api_url).json(&map).send().await?.text().await?
+                    }
+                }
             }
             _ => return Err(Box::from("Invalid operation")),
         };
@@ -261,14 +307,26 @@ impl VadePlugin for VadeSidetree {
             return Ok(VadePluginResultValue::Ignored);
         }
 
+        #[cfg(feature = "sdk")]
+        let request_pointer = self.config.request_id.clone();
+
+        #[cfg(feature = "sdk")]
+        let resolve_http_request = self.config.resolve_http_request;
+
         let mut api_url = self.config.sidetree_rest_api_url.clone();
         api_url.push_str("identifiers/");
         api_url.push_str(did_id);
 
-        let client = reqwest::Client::new();
-        let res = client.get(api_url).send().await?.text().await?;
-
-        Ok(VadePluginResultValue::Success(Some(res)))
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "sdk")]{
+                let res = send_request(api_url, "GET".to_string(), None, request_pointer, resolve_http_request)?;
+                Ok(VadePluginResultValue::Success(Some(res)))
+            } else {
+                let client = Client::new();
+                let res = client.get(api_url).send().await?.text().await?;
+                Ok(VadePluginResultValue::Success(Some(res)))
+            }
+        }
     }
 }
 
@@ -276,12 +334,12 @@ impl VadePlugin for VadeSidetree {
 mod tests {
     use super::*;
     use serial_test::serial;
+    use std::sync::Once;
+    use std::{thread, time::Duration};
     use vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
         multihash, secp256k1, Patch,
     };
-    use std::sync::Once;
-    use std::{thread, time::Duration};
 
     static INIT: Once = Once::new();
 
