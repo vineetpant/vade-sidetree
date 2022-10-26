@@ -20,13 +20,15 @@ use crate::datatypes::*;
 use async_trait::async_trait;
 use base64::encode_config;
 use regex::Regex;
-use vade_sidetree_client::{
-    operations::{self, DeactivateOperationInput, Operation},
-    operations::{RecoverOperationInput, UpdateOperationInput},
-};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use vade::{VadePlugin, VadePluginResultValue};
+use vade_sidetree_client::{
+    did::JsonWebKey,
+    operations::{self, DeactivateOperationInput, Operation, OperationInput},
+    operations::{RecoverOperationInput, UpdateOperationInput},
+};
 
 const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
 const EVAN_METHOD: &str = "did:evan";
@@ -48,6 +50,15 @@ macro_rules! ignore_unrelated {
             _ => return Ok(VadePluginResultValue::Ignored),
         };
     }};
+}
+
+/// Options for DID creation. If keys are not provided, they will be generated automatically
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDidOptions {
+    pub r#type: String,
+    pub update_key: Option<JsonWebKey>,
+    pub recovery_key: Option<JsonWebKey>,
 }
 
 /// Sidetree Rest API url
@@ -79,7 +90,7 @@ impl VadePlugin for VadeSidetree {
     /// # Arguments
     ///
     /// * `did_method` - did method to cater to, usually "did:evan"
-    /// * `options` - serialized object of TypeOptions
+    /// * `options` - serialized object of CreateDidOptions
     /// * `_payload` - no payload required, so can be left empty
     async fn did_create(
         &mut self,
@@ -92,7 +103,14 @@ impl VadePlugin for VadeSidetree {
         if !did_method.starts_with(EVAN_METHOD) {
             return Ok(VadePluginResultValue::Ignored);
         }
-        let create_operation = operations::create();
+        let options: CreateDidOptions = serde_json::from_str(options)?;
+        let config = OperationInput {
+            public_keys: None,
+            services: None,
+            update_key: options.update_key,
+            recovery_key: options.recovery_key,
+        };
+        let create_operation = operations::create(Some(config));
         let create_output = match create_operation {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!("{}", err))),
@@ -276,12 +294,12 @@ impl VadePlugin for VadeSidetree {
 mod tests {
     use super::*;
     use serial_test::serial;
+    use std::sync::Once;
+    use std::{thread, time::Duration};
     use vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
         multihash, secp256k1, Patch,
     };
-    use std::sync::Once;
-    use std::{thread, time::Duration};
 
     static INIT: Once = Once::new();
 
@@ -301,6 +319,54 @@ mod tests {
             .await;
 
         assert_eq!(result.is_ok(), true);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn can_create_did_with_predefined_keys() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+
+        let options = r###"{
+            "type": "sidetree",
+            "updateKey": {
+              "kty": "EC",
+              "crv": "secp256k1",
+              "x": "fjpbUu5Vw9a_N2CLMN0FGDxclkMyYB5KmTY1pLiZUSs",
+              "y": "1XhoPXS7o5pnrpQJX3kx6GLePa9ciTcH8Fbmo8Kl9S4",
+              "d": "slZ0pCqta5YF60ev1N7SY6ffP6Zh_LmkDS_imHtz_jI"
+            },
+            "recoveryKey": {
+              "kty": "EC",
+              "crv": "secp256k1",
+              "x": "PICqtwQRifxZspzID9073FJSI4AE77kjxQD2_t2cj6U",
+              "y": "489btoCSOyvhgQJXU9qo7n25ttJDleOMDVCkpOvB9Uk",
+              "d": "gU5iJcTcsSA0q2Ajy5bnBQIzOUthMty7swtGGcWORDw"
+            }
+          }"###;
+
+        let result = did_handler.did_create("did:evan", options, "{}").await;
+
+        assert_eq!(result.is_ok(), true);
+
+        let result_value = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result".to_string())),
+        };
+
+        let parsed_options: CreateDidOptions = serde_json::from_str(options)?;
+        let parsed_result_value: DidCreateResponse = serde_json::from_str(&result_value)?;
+
+        assert_eq!(
+            serde_json::to_string(&parsed_result_value.update_key)?,
+            serde_json::to_string(&parsed_options.update_key)?,
+        );
+        assert_eq!(
+            serde_json::to_string(&parsed_result_value.recovery_key)?,
+            serde_json::to_string(&parsed_options.recovery_key)?,
+        );
 
         Ok(())
     }
@@ -424,7 +490,7 @@ mod tests {
     async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let create_operation = operations::create();
+        let create_operation = operations::create(None);
         let create_output = match create_operation {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!(" {}", err))),
