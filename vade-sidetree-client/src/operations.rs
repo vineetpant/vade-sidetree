@@ -499,14 +499,14 @@ mod test {
 
     #[test]
     fn generate_create_operation_with_input() {
-        let putblic_key = PublicKey {
+        let public_key = PublicKey {
             id: "key-1".into(),
-            purpose: Some(Purpose::AUTHENTICATION | Purpose::CAPABILITY_DELEGATION),
+            purpose: Some(vec![Purpose::Auth, Purpose::Delegation]),
             key_type: "SampleVerificationKey2020".into(),
             jwk: None,
         };
 
-        let config = OperationInput::new().with_public_keys(vec![putblic_key]);
+        let config = OperationInput::new().with_public_keys(vec![public_key]);
 
         let result = create_config(config).unwrap();
 
