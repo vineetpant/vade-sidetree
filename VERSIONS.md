@@ -4,6 +4,8 @@
 
 ### Features
 
+- add support for passing keys to DID creation
+
 ### Fixes
 
 ### Deprecations
