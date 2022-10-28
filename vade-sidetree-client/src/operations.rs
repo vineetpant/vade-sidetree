@@ -152,7 +152,6 @@ pub struct OperationOutput {
     pub did_suffix: String,
     pub update_key: JsonWebKey,
     pub recovery_key: JsonWebKey,
-    pub public_keys: Vec<PublicKey>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -196,30 +195,21 @@ impl Serialize for Operation {
     }
 }
 
-pub fn create<'a>() -> Result<OperationOutput, Error<'a>> {
-    let signing_key = KeyPair::random();
-    let signing_key_public =
-        signing_key.to_public_key("key-1".into(), Some([Purpose::Agreement].to_vec()));
-
-    create_config(OperationInput::new().with_public_keys(vec![signing_key_public]))
+pub fn create<'a>(config: Option<OperationInput>) -> Result<OperationOutput, Error<'a>> {
+    create_config(config.unwrap_or_else(|| OperationInput::new()))
 }
 
 pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Error<'a>> {
-    if let None = config.public_keys {
-        return Err(Error::MissingField("public_keys"));
-    }
-
-    let update_key = KeyPair::random();
-    let recovery_key = KeyPair::random();
-
     let document = Document {
-        public_keys: config.public_keys.clone().unwrap(),
+        public_keys: vec![],
         services: None,
     };
-
     let patches = vec![Patch::Replace(ReplaceDocument { document })];
 
-    let mut update_key_public: JsonWebKey = (&update_key).into();
+    let update_key = config
+        .update_key
+        .unwrap_or_else(|| (&KeyPair::random()).into());
+    let mut update_key_public = update_key.clone();
     update_key_public.d = None;
 
     let delta = Delta {
@@ -237,7 +227,10 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
         crate::multihash::HashAlgorithm::Sha256,
     );
 
-    let mut recovery_key_public: JsonWebKey = (&recovery_key).into();
+    let recovery_key = config
+        .recovery_key
+        .unwrap_or_else(|| (&KeyPair::random()).into());
+    let mut recovery_key_public = recovery_key.clone();
     recovery_key_public.d = None;
 
     let suffix_data = SuffixData {
@@ -253,9 +246,8 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
     let operation = Operation::Create(suffix_data, delta);
 
     Ok(OperationOutput {
-        update_key: (&update_key).into(),
-        recovery_key: (&recovery_key).into(),
-        public_keys: config.public_keys.unwrap(),
+        update_key,
+        recovery_key,
         operation_request: operation,
         did_suffix,
     })
@@ -494,7 +486,7 @@ mod test {
 
     #[test]
     fn generate_create_operation() {
-        let result = create().unwrap();
+        let result = create(None).unwrap();
         let json = serde_json::to_string_pretty(&result.operation_request);
 
         assert!(matches!(json, Result::Ok(_)));
@@ -507,14 +499,14 @@ mod test {
 
     #[test]
     fn generate_create_operation_with_input() {
-        let putblic_key = PublicKey {
+        let public_key = PublicKey {
             id: "key-1".into(),
-            purpose: Some(Purpose::AUTHENTICATION | Purpose::CAPABILITY_DELEGATION),
+            purpose: Some(vec![Purpose::Auth, Purpose::Delegation]),
             key_type: "SampleVerificationKey2020".into(),
             jwk: None,
         };
 
-        let config = OperationInput::new().with_public_keys(vec![putblic_key]);
+        let config = OperationInput::new().with_public_keys(vec![public_key]);
 
         let result = create_config(config).unwrap();
 
