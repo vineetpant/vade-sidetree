@@ -479,7 +479,7 @@ mod tests {
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(resolve_result.did_document.key_agreement.len(), 2);
+        assert_eq!(resolve_result.did_document.key_agreement.len(), 1);
 
         Ok(())
     }
