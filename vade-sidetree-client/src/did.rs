@@ -6,6 +6,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Document {
     pub public_keys: Vec<PublicKey>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -13,17 +14,19 @@ pub struct Document {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct PublicKey {
     pub id: String,
     #[serde(rename = "type")]
     pub key_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub purpose: Option<Vec<Purpose>>,
+    pub purposes: Option<Vec<Purpose>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub jwk: Option<JsonWebKey>,
+    pub public_key_jwk: Option<JsonWebKey>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct JsonWebKey {
     #[serde(rename = "kty")]
     pub key_type: String,
@@ -36,21 +39,22 @@ pub struct JsonWebKey {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Service {
     pub id: String,
     #[serde(rename = "type")]
     pub service_type: String,
-    pub endpoint: String,
+    pub service_endpoint: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all(serialize = "snake_case", deserialize = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 pub enum Purpose {
-    Auth,
-    Assertion,
-    Invocation,
-    Delegation,
-    Agreement,
+    Authentication,
+    KeyAgreement,
+    AssertionMethod,
+    CapabilityDelegation,
+    CapabilityInvocation,
 }
 
 pub(crate) fn compute_unique_suffix(suffix_data: &SuffixData) -> String {
