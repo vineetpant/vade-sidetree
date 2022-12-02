@@ -126,7 +126,6 @@ impl VadePlugin for VadeSidetree {
             .await?
             .text()
             .await?;
-        dbg!(&res);
         let response = DidCreateResponse {
             update_key: create_result.update_key,
             recovery_key: create_result.recovery_key,
