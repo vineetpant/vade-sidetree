@@ -1,5 +1,5 @@
 use crate::encoder::decode;
-use crate::multihash::hash_then_encode;
+use crate::multihash::{canonicalize_then_double_hash_then_encode, hash_then_encode};
 use crate::{
     did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
     SuffixData,
@@ -15,9 +15,9 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone)]
 pub enum Operation {
     Create(SuffixData, Delta),
-    Update(String, Delta, String),
-    Recover(String, Delta, String),
-    Deactivate(String, String),
+    Update(String, Delta, String, String),
+    Recover(String, Delta, String, String),
+    Deactivate(String, String, String),
 }
 
 #[derive(Serialize, Debug, Clone, Default)]
@@ -147,6 +147,7 @@ impl DeactivateOperationInput {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct OperationOutput {
     pub operation_request: Operation,
     pub did_suffix: String,
@@ -155,6 +156,7 @@ pub struct OperationOutput {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateOperationOutput {
     pub operation_request: Operation,
 }
@@ -169,25 +171,28 @@ impl Serialize for Operation {
         match self {
             Operation::Create(suffix_data, delta) => {
                 map.serialize_entry("type", "create")?;
-                map.serialize_entry("suffix_data", suffix_data)?;
+                map.serialize_entry("suffixData", suffix_data)?;
                 map.serialize_entry("delta", delta)?;
             }
-            Operation::Update(did_suffix, delta, signed_data) => {
+            Operation::Update(did_suffix, delta, signed_data, reveal_value) => {
                 map.serialize_entry("type", "update")?;
-                map.serialize_entry("did_suffix", did_suffix)?;
+                map.serialize_entry("didSuffix", did_suffix)?;
                 map.serialize_entry("delta", delta)?;
-                map.serialize_entry("signed_data", signed_data)?;
+                map.serialize_entry("signedData", signed_data)?;
+                map.serialize_entry("revealValue", reveal_value)?;
             }
-            Operation::Recover(did_suffix, delta, signed_data) => {
-                map.serialize_entry("type", "update")?;
-                map.serialize_entry("did_suffix", did_suffix)?;
+            Operation::Recover(did_suffix, delta, signed_data, reveal_value) => {
+                map.serialize_entry("type", "recover")?;
+                map.serialize_entry("didSuffix", did_suffix)?;
                 map.serialize_entry("delta", delta)?;
-                map.serialize_entry("signed_data", signed_data)?;
+                map.serialize_entry("signedData", signed_data)?;
+                map.serialize_entry("revealValue", reveal_value)?;
             }
-            Operation::Deactivate(did_suffix, signed_data) => {
+            Operation::Deactivate(did_suffix, signed_data, reveal_value) => {
                 map.serialize_entry("type", "deactivate")?;
-                map.serialize_entry("did_suffix", did_suffix)?;
-                map.serialize_entry("signed_data", signed_data)?;
+                map.serialize_entry("didSuffix", did_suffix)?;
+                map.serialize_entry("signedData", signed_data)?;
+                map.serialize_entry("revealValue", reveal_value)?;
             }
         }
 
@@ -213,10 +218,7 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
     update_key_public.d = None;
 
     let delta = Delta {
-        update_commitment: canonicalize_then_hash_then_encode(
-            &update_key_public,
-            crate::multihash::HashAlgorithm::Sha256,
-        ),
+        update_commitment: canonicalize_then_double_hash_then_encode(&update_key_public).unwrap(),
         patches,
     };
 
@@ -235,10 +237,8 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
 
     let suffix_data = SuffixData {
         delta_hash,
-        recovery_commitment: canonicalize_then_hash_then_encode(
-            &recovery_key_public,
-            crate::multihash::HashAlgorithm::Sha256,
-        ),
+        recovery_commitment: canonicalize_then_double_hash_then_encode(&recovery_key_public)
+            .unwrap(),
         data_type: None,
     };
 
@@ -284,15 +284,11 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
         patches: config.patches,
     };
 
-    let delta_hash = hash_then_encode(
-        serde_json::to_string(&delta)
-            .map_err(|_| Error::MissingField("Failed to canonicalize"))?
-            .as_bytes(),
-        crate::multihash::HashAlgorithm::Sha256,
-    );
+    let delta_hash =
+        canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
 
     let signed_data_payload = SignedUpdateDataPayload {
-        update_key: update_key_public,
+        update_key: update_key_public.clone(),
         delta_hash,
     };
 
@@ -324,7 +320,12 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
         &mut message,
     );
 
-    let operation = Operation::Update(config.did_suffix, delta, message);
+    let reveal_value = canonicalize_then_hash_then_encode(
+        &update_key_public.clone(),
+        crate::multihash::HashAlgorithm::Sha256,
+    );
+
+    let operation = Operation::Update(config.did_suffix, delta, message, reveal_value);
 
     Ok(UpdateOperationOutput {
         operation_request: operation,
@@ -362,12 +363,8 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
         patches: config.patches,
     };
 
-    let delta_hash = hash_then_encode(
-        serde_json::to_string(&delta)
-            .map_err(|_| Error::MissingField("Failed to canonicalize"))?
-            .as_bytes(),
-        crate::multihash::HashAlgorithm::Sha256,
-    );
+    let delta_hash =
+        canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
 
     let signed_data_payload = SignedRecoveryDataPayload {
         delta_hash,
@@ -403,7 +400,12 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
         &mut message,
     );
 
-    let operation = Operation::Recover(config.did_suffix, delta, message);
+    let reveal_value = canonicalize_then_hash_then_encode(
+        &recovery_key_public.clone(),
+        crate::multihash::HashAlgorithm::Sha256,
+    );
+
+    let operation = Operation::Recover(config.did_suffix, delta, message, reveal_value);
 
     Ok(UpdateOperationOutput {
         operation_request: operation,
@@ -471,7 +473,12 @@ pub fn deactivate<'a>(
         &mut message,
     );
 
-    let operation = Operation::Deactivate(config.did_suffix, message);
+    let reveal_value = canonicalize_then_hash_then_encode(
+        &recovery_key_public.clone(),
+        crate::multihash::HashAlgorithm::Sha256,
+    );
+
+    let operation = Operation::Deactivate(config.did_suffix, message, reveal_value);
 
     Ok(UpdateOperationOutput {
         operation_request: operation,
@@ -501,9 +508,9 @@ mod test {
     fn generate_create_operation_with_input() {
         let public_key = PublicKey {
             id: "key-1".into(),
-            purpose: Some(vec![Purpose::Auth, Purpose::Delegation]),
+            purposes: Some(vec![Purpose::Authentication, Purpose::CapabilityDelegation]),
             key_type: "SampleVerificationKey2020".into(),
-            jwk: None,
+            public_key_jwk: None,
         };
 
         let config = OperationInput::new().with_public_keys(vec![public_key]);

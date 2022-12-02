@@ -14,6 +14,7 @@ pub enum UpdateType {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct OperationRequestGenerated {
     pub r#type: String,
     pub suffix_data: SuffixData,
@@ -21,6 +22,7 @@ pub struct OperationRequestGenerated {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct DIDCreateResult {
     pub operation_request: OperationRequestGenerated,
     pub did_suffix: String,
@@ -29,6 +31,7 @@ pub struct DIDCreateResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SignedDataPayload {
     pub update_key: JsonWebKey,
     pub delta_hash: String,
@@ -57,7 +60,7 @@ pub struct DidDocument {
     pub id: String,
     #[serde(rename = "@context")]
     pub context: Value,
-    pub key_agreement: Vec<KeyAgreement>,
+    pub verification_method: Option<Vec<KeyAgreement>>,
     pub service: Option<Vec<Service>>,
 }
 
@@ -74,8 +77,16 @@ pub struct KeyAgreement {
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DidDocumentMetadata {
-    pub recovery_commitment: String,
-    pub update_commitment: String,
+    pub method: MethodMetadata,
+    pub deactivated: Option<bool>,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MethodMetadata {
+    pub published: bool,
+    pub recovery_commitment: Option<String>,
+    pub update_commitment: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -88,6 +99,7 @@ pub struct Service {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct DidUpdatePayload {
     pub update_type: UpdateType,
     pub update_key: Option<JsonWebKey>,
@@ -98,6 +110,7 @@ pub struct DidUpdatePayload {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct DidCreateResponse {
     pub update_key: JsonWebKey,
     pub recovery_key: JsonWebKey,
