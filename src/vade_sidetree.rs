@@ -221,7 +221,6 @@ impl VadePlugin for VadeSidetree {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!("{}", err))),
         };
-        dbg!(serde_json::to_string(&update_output.operation_request)?);
         let res = client
             .post(api_url)
             .json(&update_output.operation_request)
