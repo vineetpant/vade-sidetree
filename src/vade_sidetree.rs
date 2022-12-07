@@ -452,7 +452,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // then add a new public key to the DID
         let key_pair = secp256k1::KeyPair::random();
@@ -489,7 +489,7 @@ mod tests {
         };
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there are 2 public keys in the DID document
         let result = did_handler
@@ -681,7 +681,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -770,7 +770,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -902,7 +902,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(30000));
+        thread::sleep(Duration::from_millis(40000));
 
         // resolve DID
         let result = did_handler
@@ -962,7 +962,7 @@ mod tests {
             .await;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(30000));
+        thread::sleep(Duration::from_millis(40000));
 
         // try to resolve DID after recovery
         let result = did_handler
@@ -1011,7 +1011,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Deactivate,
@@ -1033,7 +1033,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
         // after update, resolve and check if the DID is deactivated
         let result = did_handler
             .did_resolve(&create_response.did.did_document.id)
