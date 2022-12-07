@@ -28,7 +28,7 @@ use vade_sidetree_client::{
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
 
-const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
+const DEFAULT_URL: &str = "https://sidetree.evan.network/3.0/";
 const EVAN_METHOD: &str = "did:evan";
 const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
 const DID_SIDETREE: &str = "sidetree";
@@ -325,7 +325,7 @@ mod tests {
 
         assert_eq!(result.is_ok(), true);
 
-        let result_value = match result {
+        let result_value = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
