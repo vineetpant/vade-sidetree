@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::error::Error;
 #[cfg(feature = "sdk")]
 use std::ffi::{CStr, CString};
@@ -16,7 +15,7 @@ pub type ResolveHttpRequest = extern "C" fn(
 pub fn send_request(
     url: String,
     method: String,
-    payload: Option<HashMap<&str, &str>>,
+    payload: Option<String>,
     request_pointer: *const c_void,
     resolve_http_request: ResolveHttpRequest,
 ) -> Result<String, Box<dyn Error>> {
@@ -29,8 +28,7 @@ pub fn send_request(
     let path = CString::new("")?;
     let path = path.as_ptr();
 
-    let payload = serde_json::to_string(&payload)?;
-    let payload = CString::new(payload)?;
+    let payload = CString::new(payload.ok_or("")?)?;
     let payload = payload.as_ptr();
 
     let mut res: *mut c_char = std::ptr::null_mut();

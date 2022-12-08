@@ -27,15 +27,15 @@ impl KeyPair {
         )
     }
 
-    pub fn to_public_key(&self, id: String, purpose: Option<Vec<Purpose>>) -> crate::PublicKey {
+    pub fn to_public_key(&self, id: String, purposes: Option<Vec<Purpose>>) -> crate::PublicKey {
         let mut jwk: JsonWebKey = self.into();
         jwk.d = None;
 
         crate::PublicKey {
             id,
             key_type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-            purpose,
-            jwk: Some(jwk),
+            purposes,
+            public_key_jwk: Some(jwk),
         }
     }
 
