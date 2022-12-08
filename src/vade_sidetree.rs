@@ -18,19 +18,17 @@ extern crate vade;
 
 use crate::datatypes::*;
 use async_trait::async_trait;
-use base64::encode_config;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::error::Error;
 use vade::{VadePlugin, VadePluginResultValue};
 use vade_sidetree_client::{
     did::JsonWebKey,
-    operations::{self, DeactivateOperationInput, Operation, OperationInput},
+    operations::{self, DeactivateOperationInput, OperationInput},
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
 
-const DEFAULT_URL: &str = "https://sidetree.evan.network/1.0/";
+const DEFAULT_URL: &str = "https://sidetree.evan.network/3.0/";
 const EVAN_METHOD: &str = "did:evan";
 const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
 const DID_SIDETREE: &str = "sidetree";
@@ -119,22 +117,15 @@ impl VadePlugin for VadeSidetree {
         let mut api_url = self.config.sidetree_rest_api_url.clone();
         api_url.push_str("operations");
         let create_result: DIDCreateResult = serde_json::from_str(&json)?;
-        let suffix_data_base64 = &encode_config(
-            serde_json::to_string(&create_result.operation_request.suffix_data)?,
-            base64::STANDARD_NO_PAD,
-        );
-        let delta_base64 = &encode_config(
-            serde_json::to_string(&create_result.operation_request.delta)?,
-            base64::STANDARD_NO_PAD,
-        );
-        let mut map = HashMap::new();
-        map.insert("type", "create");
-        map.insert("suffix_data", suffix_data_base64);
-        map.insert("delta", delta_base64);
 
         let client = reqwest::Client::new();
-        let res = client.post(api_url).json(&map).send().await?.text().await?;
-
+        let res = client
+            .post(api_url)
+            .json(&create_result.operation_request)
+            .send()
+            .await?
+            .text()
+            .await?;
         let response = DidCreateResponse {
             update_key: create_result.update_key,
             recovery_key: create_result.recovery_key,
@@ -168,7 +159,6 @@ impl VadePlugin for VadeSidetree {
 
         let mut operation_type: String = String::new();
         let mut api_url = self.config.sidetree_rest_api_url.clone();
-        let mut map = HashMap::new();
         let client = reqwest::Client::new();
 
         api_url.push_str("operations");
@@ -231,31 +221,13 @@ impl VadePlugin for VadeSidetree {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!("{}", err))),
         };
-
-        let res = match update_output.operation_request {
-            Operation::Update(did, delta, signed) | Operation::Recover(did, delta, signed) => {
-                let mut delta_base64 = String::new();
-                delta_base64.push_str(&encode_config(
-                    serde_json::to_string(&delta)?,
-                    base64::STANDARD_NO_PAD,
-                ));
-
-                map.insert("type", &operation_type);
-                map.insert("signed_data", &signed);
-                map.insert("did_suffix", &did);
-                map.insert("delta", &delta_base64);
-                client.post(api_url).json(&map).send().await?.text().await?
-            }
-
-            Operation::Deactivate(did, signed) => {
-                map.insert("type", &operation_type);
-                map.insert("signed_data", &signed);
-                map.insert("did_suffix", &did);
-
-                client.post(api_url).json(&map).send().await?.text().await?
-            }
-            _ => return Err(Box::from("Invalid operation")),
-        };
+        let res = client
+            .post(api_url)
+            .json(&update_output.operation_request)
+            .send()
+            .await?
+            .text()
+            .await?;
 
         Ok(VadePluginResultValue::Success(Some(res)))
     }
@@ -309,7 +281,8 @@ mod tests {
         });
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_create_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -323,7 +296,8 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_create_did_with_predefined_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -371,7 +345,8 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_resolve_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -390,7 +365,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let result = did_handler
             .did_resolve(&create_response.did.did_document.id)
@@ -410,7 +385,8 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_update_did_add_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -430,18 +406,19 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // then add a new public key to the DID
         let key_pair = secp256k1::KeyPair::random();
         let update_key =
-            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+            key_pair.to_public_key("update_key".into(), Some([Purpose::KeyAgreement].to_vec()));
 
         let patch: Patch = Patch::AddPublicKeys(vade_sidetree_client::AddPublicKeys {
             public_keys: vec![update_key.clone()],
         });
 
-        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+        let update_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&update_key.public_key_jwk)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
@@ -460,13 +437,13 @@ mod tests {
             )
             .await;
 
-        let _respone = match result? {
+        let _response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there are 2 public keys in the DID document
         let result = did_handler
@@ -479,37 +456,56 @@ mod tests {
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(resolve_result.did_document.key_agreement.len(), 1);
+        assert_eq!(
+            resolve_result.did_document.verification_method.is_some(),
+            true
+        );
+        assert_eq!(
+            resolve_result
+                .did_document
+                .verification_method
+                .unwrap()
+                .len(),
+            1
+        );
 
         Ok(())
     }
 
-    #[ignore]
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
-        let create_operation = operations::create(None);
-        let create_output = match create_operation {
-            Ok(value) => value,
-            Err(err) => return Err(Box::from(format!(" {}", err))),
+        // first create a new DID on sidetree
+        let result = did_handler
+            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .await;
+        assert!(result.is_ok());
+
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result".to_string())),
         };
-        let json = serde_json::to_string(&create_output)?;
-        let create_response: DIDCreateResult = serde_json::from_str(&json)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
+        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+
+        // then add a new public key to the DID
         let key_pair = secp256k1::KeyPair::random();
         let update_key =
-            key_pair.to_public_key("update_key".into(), Some([Purpose::Agreement].to_vec()));
+            key_pair.to_public_key("update_key".into(), Some([Purpose::KeyAgreement].to_vec()));
 
-        let patch: Patch = Patch::RemovePublicKeys(vade_sidetree_client::RemovePublicKeys {
-            ids: vec!["update_key".to_string()],
+        let patch: Patch = Patch::AddPublicKeys(vade_sidetree_client::AddPublicKeys {
+            public_keys: vec![update_key.clone()],
         });
 
-        let update_commitment = multihash::canonicalize_then_double_hash_then_encode(&update_key)?;
+        let update_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&update_key.public_key_jwk)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
@@ -520,13 +516,72 @@ mod tests {
             recovery_key: None,
         };
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         let result = did_handler
             .did_update(
-                &format!(
-                    "did:evan:{}",
-                    "EiC5_bIqTpMDGHBra-XnjoVV1r4mZwBt9pYNx8VaSaEZtQ"
-                ),
+                &create_response.did.did_document.id,
+                &"{\"type\":\"sidetree\"}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        let _response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result".to_string())),
+        };
+
+        // Sleep is required to let the create or update operation take effect
+        thread::sleep(Duration::from_millis(40000));
+
+        // after update, resolve and check if there are 2 public keys in the DID document
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(
+            resolve_result.did_document.verification_method.is_some(),
+            true
+        );
+        assert_eq!(
+            resolve_result
+                .did_document
+                .verification_method
+                .unwrap()
+                .len(),
+            1
+        );
+
+        // then remove the public key from the DID again
+        let new_key_pair = secp256k1::KeyPair::random();
+        let new_update_key = new_key_pair.to_public_key(
+            "new_update_key".into(),
+            Some([Purpose::KeyAgreement].to_vec()),
+        );
+
+        let patch: Patch = Patch::RemovePublicKeys(vade_sidetree_client::RemovePublicKeys {
+            ids: vec!["update_key".to_string()],
+        });
+
+        let update_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&new_update_key)?;
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(JsonWebKey::from(&key_pair)),
+            update_commitment: Some(update_commitment),
+            patches: Some(vec![patch]),
+            recovery_commitment: None,
+            recovery_key: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &format!("did:evan:{}", &create_response.did.did_document.id),
                 &"{\"type\":\"sidetree\"}",
                 &serde_json::to_string(&update_payload)?,
             )
@@ -538,10 +593,29 @@ mod tests {
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
 
+        // Sleep is required to let the create or update operation take effect
+        thread::sleep(Duration::from_millis(40000));
+
+        // after update, resolve and check if there are 2 public keys in the DID document
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(
+            resolve_result.did_document.verification_method.is_some(),
+            false
+        );
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_update_did_add_service_endpoints() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -561,24 +635,27 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
         let service = Service {
             id: "sds".to_string(),
             service_type: "SecureDataStrore".to_string(),
-            endpoint: service_endpoint.clone(),
+            service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServiceEndpoints(vade_sidetree_client::AddServices {
-            service_endpoints: vec![service],
+        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+            services: vec![service],
         });
 
-        let update_commitment = multihash::canonicalize_then_hash_then_encode(
-            &create_response.update_key,
-            multihash::HashAlgorithm::Sha256,
-        );
+        // then add a new public key to the DID
+        let key_pair = secp256k1::KeyPair::random();
+        let update_key =
+            key_pair.to_public_key("update_key".into(), Some([Purpose::KeyAgreement].to_vec()));
+
+        let update_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&update_key.public_key_jwk)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
@@ -597,10 +674,13 @@ mod tests {
             )
             .await;
 
-        assert_eq!(result.is_ok(), true);
+        let _response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result".to_string())),
+        };
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there is the new added service
         let result = did_handler
@@ -623,7 +703,8 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_update_did_remove_services() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -643,28 +724,26 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
         let service = Service {
             id: "sds".to_string(),
             service_type: "SecureDataStrore".to_string(),
-            endpoint: service_endpoint.clone(),
+            service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServiceEndpoints(vade_sidetree_client::AddServices {
-            service_endpoints: vec![service],
+        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+            services: vec![service],
         });
 
         let update1_key_pair = secp256k1::KeyPair::random();
         let mut update1_public_key: JsonWebKey = (&update1_key_pair).into();
         update1_public_key.d = None;
 
-        let update_commitment = multihash::canonicalize_then_hash_then_encode(
-            &update1_public_key,
-            multihash::HashAlgorithm::Sha256,
-        );
+        let update_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&update1_public_key)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
@@ -686,7 +765,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there is the new added service
         let result = did_handler
@@ -706,12 +785,15 @@ mod tests {
         assert_eq!(did_document_services.len(), 1);
         assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
 
-        let patch: Patch = Patch::RemoveServiceEndpoints(vade_sidetree_client::RemoveServices {
+        let patch: Patch = Patch::RemoveServices(vade_sidetree_client::RemoveServices {
             ids: vec!["sds".to_string()],
         });
 
+        let update2_key_pair = secp256k1::KeyPair::random();
+        let mut update2_public_key: JsonWebKey = (&update2_key_pair).into();
+        update2_public_key.d = None;
         let update_commitment =
-            multihash::canonicalize_then_hash_then_encode(&patch, multihash::HashAlgorithm::Sha256);
+            multihash::canonicalize_then_double_hash_then_encode(&update2_public_key)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
@@ -733,7 +815,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if the service is removed
         let result = did_handler
@@ -753,7 +835,8 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -773,7 +856,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // resolve DID
         let result = did_handler
@@ -804,20 +887,16 @@ mod tests {
         let patch: Patch = Patch::Replace(vade_sidetree_client::ReplaceDocument {
             document: Document {
                 public_keys: vec![update1_key_pair
-                    .to_public_key("doc_key".into(), Some([Purpose::Agreement].to_vec()))],
+                    .to_public_key("doc_key".into(), Some([Purpose::KeyAgreement].to_vec()))],
                 services: None,
             },
         });
 
-        let recovery_commitment = multihash::canonicalize_then_hash_then_encode(
-            &recover1_public_key,
-            multihash::HashAlgorithm::Sha256,
-        );
+        let recovery_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&recover1_public_key)?;
 
-        let update_commitment = multihash::canonicalize_then_hash_then_encode(
-            &update1_public_key,
-            multihash::HashAlgorithm::Sha256,
-        );
+        let update_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&update1_public_key)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Recovery,
@@ -837,7 +916,7 @@ mod tests {
             .await;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         // try to resolve DID after recovery
         let result = did_handler
@@ -853,12 +932,20 @@ mod tests {
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
 
         // check if the replaced key is now in the document
-        assert_eq!(resolve_result.did_document.key_agreement[0].id, "#doc_key");
+        assert_eq!(
+            resolve_result.did_document.verification_method.is_some(),
+            true
+        );
+        assert_eq!(
+            resolve_result.did_document.verification_method.unwrap()[0].id,
+            "#doc_key"
+        );
 
         Ok(())
     }
 
-    #[tokio::test]
+    #[tokio::main]
+    #[test]
     #[serial]
     async fn can_update_did_deactivate() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
@@ -878,7 +965,7 @@ mod tests {
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Deactivate,
@@ -900,7 +987,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(20000));
+        thread::sleep(Duration::from_millis(40000));
         // after update, resolve and check if the DID is deactivated
         let result = did_handler
             .did_resolve(&create_response.did.did_document.id)
@@ -911,7 +998,17 @@ mod tests {
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
 
-        assert_eq!(did_resolve, "{\"status\":\"deactivated\"}");
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+
+        // check if the replaced key is now in the document
+        assert_eq!(
+            resolve_result.did_document_metadata.deactivated.is_some(),
+            true
+        );
+        assert_eq!(
+            resolve_result.did_document_metadata.deactivated.unwrap(),
+            true
+        );
 
         Ok(())
     }
