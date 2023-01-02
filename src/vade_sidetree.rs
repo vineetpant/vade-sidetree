@@ -151,7 +151,6 @@ impl VadePlugin for VadeSidetree {
                     &response.did.did_document.id,
                 )
                 .await?;
-                dbg!(&res);
                 if res != "Not Found" {
                     update_found = true;
                 } else {
@@ -270,7 +269,6 @@ impl VadePlugin for VadeSidetree {
             while !update_found {
                 let res =
                     resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), &did).await?;
-                dbg!(&res);
                 if res != "Not Found" {
                     let did_document: SidetreeDidDocument = serde_json::from_str(&res)?;
                     match update_payload.update_type {
