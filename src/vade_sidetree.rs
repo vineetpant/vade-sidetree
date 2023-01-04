@@ -17,11 +17,12 @@ extern crate regex;
 extern crate vade;
 
 use crate::datatypes::*;
+use async_std::task;
 use async_trait::async_trait;
 use core::time;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::{error::Error, thread};
+use std::error::Error;
 use vade::{VadePlugin, VadePluginResultValue};
 use vade_sidetree_client::{
     did::JsonWebKey,
@@ -154,7 +155,7 @@ impl VadePlugin for VadeSidetree {
                 if res != "Not Found" {
                     update_found = true;
                 } else {
-                    thread::sleep(time::Duration::from_millis(1000));
+                    task::sleep(time::Duration::from_millis(1_000)).await;
                     timeout_counter += 1;
                     if timeout_counter == 60 {
                         return Ok(VadePluginResultValue::Success(Some(
@@ -290,7 +291,7 @@ impl VadePlugin for VadeSidetree {
                     }
                 }
                 if !update_found {
-                    thread::sleep(time::Duration::from_millis(1000));
+                    task::sleep(time::Duration::from_millis(1_000)).await;
                     timeout_counter += 1;
                     if timeout_counter == 60 {
                         return Ok(VadePluginResultValue::Success(Some(
