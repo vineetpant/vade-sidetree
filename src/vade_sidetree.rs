@@ -17,7 +17,9 @@ extern crate regex;
 extern crate vade;
 
 use crate::datatypes::*;
+use async_std::task;
 use async_trait::async_trait;
+use core::time;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -57,6 +59,15 @@ pub struct CreateDidOptions {
     pub r#type: String,
     pub update_key: Option<JsonWebKey>,
     pub recovery_key: Option<JsonWebKey>,
+    pub wait_for_completion: Option<bool>,
+}
+
+/// Options for DID update.
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateDidOptions {
+    pub r#type: String,
+    pub wait_for_completion: Option<bool>,
 }
 
 /// Sidetree Rest API url
@@ -132,6 +143,29 @@ impl VadePlugin for VadeSidetree {
             did: serde_json::from_str(&res)?,
         };
 
+        if options.wait_for_completion == Some(true) {
+            let mut update_found = false;
+            let mut timeout_counter = 0;
+            while !update_found {
+                let res = resolve_sidetree_did(
+                    self.config.sidetree_rest_api_url.clone(),
+                    &response.did.did_document.id,
+                )
+                .await?;
+                if res != "Not Found" {
+                    update_found = true;
+                } else {
+                    task::sleep(time::Duration::from_millis(1_000)).await;
+                    timeout_counter += 1;
+                    if timeout_counter == 60 {
+                        return Ok(VadePluginResultValue::Success(Some(
+                            "Error waiting for DID create".to_string(),
+                        )));
+                    }
+                }
+            }
+        }
+
         Ok(VadePluginResultValue::Success(Some(serde_json::to_string(
             &response,
         )?)))
@@ -157,29 +191,35 @@ impl VadePlugin for VadeSidetree {
             return Ok(VadePluginResultValue::Ignored);
         }
 
+        let options: UpdateDidOptions = serde_json::from_str(options)?;
         let mut operation_type: String = String::new();
         let mut api_url = self.config.sidetree_rest_api_url.clone();
         let client = reqwest::Client::new();
-
+        let mut check_commitment: String = String::new();
         api_url.push_str("operations");
 
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
         let update_operation = match update_payload.update_type {
             UpdateType::Update | UpdateType::Recovery => {
                 if update_payload.update_type == UpdateType::Update {
+                    check_commitment = update_payload
+                        .update_commitment
+                        .ok_or("update_commitment not valid")?
+                        .clone()
+                        .to_string();
                     let operation = UpdateOperationInput::new()
                         .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
                         .with_patches(update_payload.patches.ok_or("patches not valid")?)
                         .with_update_key(update_payload.update_key.ok_or("update_key not valid")?)
-                        .with_update_commitment(
-                            update_payload
-                                .update_commitment
-                                .ok_or("update_commitment not valid")?
-                                .to_string(),
-                        );
+                        .with_update_commitment(check_commitment.clone());
                     operation_type.push_str("update");
                     operations::update(operation)
                 } else {
+                    check_commitment = update_payload
+                        .update_commitment
+                        .ok_or("update_commitment not valid")?
+                        .clone()
+                        .to_string();
                     let operation = RecoverOperationInput::new()
                         .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
                         .with_patches(update_payload.patches.ok_or("patches not valid")?)
@@ -194,12 +234,7 @@ impl VadePlugin for VadeSidetree {
                                 .ok_or("recovery_commitment not valid")?
                                 .to_string(),
                         )
-                        .with_update_commitment(
-                            update_payload
-                                .update_commitment
-                                .ok_or("update_commitment not valid")?
-                                .to_string(),
-                        );
+                        .with_update_commitment(check_commitment.clone());
                     operation_type.push_str("recover");
                     operations::recover(operation)
                 }
@@ -229,6 +264,43 @@ impl VadePlugin for VadeSidetree {
             .text()
             .await?;
 
+        if options.wait_for_completion == Some(true) {
+            let mut update_found = false;
+            let mut timeout_counter = 0;
+            while !update_found {
+                let res =
+                    resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), &did).await?;
+                if res != "Not Found" {
+                    let did_document: SidetreeDidDocument = serde_json::from_str(&res)?;
+                    match update_payload.update_type {
+                        UpdateType::Update | UpdateType::Recovery => {
+                            if did_document
+                                .did_document_metadata
+                                .method
+                                .update_commitment
+                                .eq(&Some(check_commitment.clone()))
+                            {
+                                update_found = true;
+                            }
+                        }
+                        UpdateType::Deactivate => {
+                            if did_document.did_document_metadata.deactivated == Some(true) {
+                                update_found = true;
+                            }
+                        }
+                    }
+                }
+                if !update_found {
+                    task::sleep(time::Duration::from_millis(1_000)).await;
+                    timeout_counter += 1;
+                    if timeout_counter == 60 {
+                        return Ok(VadePluginResultValue::Success(Some(
+                            "Error waiting for DID update".to_string(),
+                        )));
+                    }
+                }
+            }
+        }
         Ok(VadePluginResultValue::Success(Some(res)))
     }
 
@@ -251,15 +323,19 @@ impl VadePlugin for VadeSidetree {
             return Ok(VadePluginResultValue::Ignored);
         }
 
-        let mut api_url = self.config.sidetree_rest_api_url.clone();
-        api_url.push_str("identifiers/");
-        api_url.push_str(did_id);
-
-        let client = reqwest::Client::new();
-        let res = client.get(api_url).send().await?.text().await?;
+        let res = resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did_id).await?;
 
         Ok(VadePluginResultValue::Success(Some(res)))
     }
+}
+
+async fn resolve_sidetree_did(base_url: String, did: &str) -> Result<String, reqwest::Error> {
+    let mut api_url = base_url;
+    api_url.push_str("identifiers/");
+    api_url.push_str(did);
+
+    let client = reqwest::Client::new();
+    client.get(api_url).send().await?.text().await
 }
 
 #[cfg(test)]
@@ -267,7 +343,6 @@ mod tests {
     use super::*;
     use serial_test::serial;
     use std::sync::Once;
-    use std::{thread, time::Duration};
     use vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
         multihash, secp256k1, Patch,
@@ -288,7 +363,11 @@ mod tests {
         enable_logging();
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
+                "",
+            )
             .await;
 
         assert_eq!(result.is_ok(), true);
@@ -318,10 +397,11 @@ mod tests {
               "x": "PICqtwQRifxZspzID9073FJSI4AE77kjxQD2_t2cj6U",
               "y": "489btoCSOyvhgQJXU9qo7n25ttJDleOMDVCkpOvB9Uk",
               "d": "gU5iJcTcsSA0q2Ajy5bnBQIzOUthMty7swtGGcWORDw"
-            }
+            },
+            "waitForCompletion":true
           }"###;
 
-        let result = did_handler.did_create("did:evan", options, "{}").await;
+        let result = did_handler.did_create("did:evan", options, "").await;
 
         assert_eq!(result.is_ok(), true);
 
@@ -354,7 +434,11 @@ mod tests {
 
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
+                "{}",
+            )
             .await?;
 
         let response = match result {
@@ -363,9 +447,6 @@ mod tests {
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         let result = did_handler
             .did_resolve(&create_response.did.did_document.id)
@@ -394,7 +475,11 @@ mod tests {
 
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
             .await;
         assert!(result.is_ok());
 
@@ -404,9 +489,6 @@ mod tests {
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // then add a new public key to the DID
         let key_pair = secp256k1::KeyPair::random();
@@ -432,7 +514,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\"}",
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -441,9 +523,6 @@ mod tests {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there are 2 public keys in the DID document
         let result = did_handler
@@ -481,7 +560,11 @@ mod tests {
 
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
+                "{}",
+            )
             .await;
         assert!(result.is_ok());
 
@@ -489,9 +572,6 @@ mod tests {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
 
@@ -519,7 +599,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\"}",
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -528,9 +608,6 @@ mod tests {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there are 2 public keys in the DID document
         let result = did_handler
@@ -582,7 +659,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &format!("did:evan:{}", &create_response.did.did_document.id),
-                &"{\"type\":\"sidetree\"}",
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -592,9 +669,6 @@ mod tests {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there are 2 public keys in the DID document
         let result = did_handler
@@ -623,7 +697,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
             .await;
         assert!(result.is_ok());
 
@@ -633,9 +711,6 @@ mod tests {
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -669,7 +744,7 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\"}",
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
@@ -678,9 +753,6 @@ mod tests {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
             _ => return Err(Box::from("Unknown Result".to_string())),
         };
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there is the new added service
         let result = did_handler
@@ -712,7 +784,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
             .await;
         assert!(result.is_ok());
 
@@ -722,9 +798,6 @@ mod tests {
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -757,15 +830,12 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\"}",
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
 
         assert_eq!(result.is_ok(), true);
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if there is the new added service
         let result = did_handler
@@ -807,15 +877,12 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\"}",
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
 
         assert_eq!(result.is_ok(), true);
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // after update, resolve and check if the service is removed
         let result = did_handler
@@ -844,7 +911,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
             .await;
         assert!(result.is_ok());
 
@@ -854,9 +925,6 @@ mod tests {
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // resolve DID
         let result = did_handler
@@ -910,13 +978,10 @@ mod tests {
         let _result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\"}",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         // try to resolve DID after recovery
         let result = did_handler
@@ -953,7 +1018,11 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
         let result = did_handler
-            .did_create("did:evan", "{\"type\":\"sidetree\"}", "{}")
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
             .await;
         assert!(result.is_ok());
 
@@ -963,9 +1032,6 @@ mod tests {
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Deactivate,
@@ -979,15 +1045,12 @@ mod tests {
         let result = did_handler
             .did_update(
                 &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\"}",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
                 &serde_json::to_string(&update_payload)?,
             )
             .await;
 
         assert_eq!(result.is_ok(), true);
-
-        // Sleep is required to let the create or update operation take effect
-        thread::sleep(Duration::from_millis(40000));
         // after update, resolve and check if the DID is deactivated
         let result = did_handler
             .did_resolve(&create_response.did.did_document.id)
