@@ -97,8 +97,8 @@ pub struct DidUpdatePayload {
     pub update_type: UpdateType,
     pub update_key: Option<JsonWebKey>,
     pub recovery_key: Option<JsonWebKey>,
-    pub update_commitment: Option<String>,
-    pub recovery_commitment: Option<String>,
+    pub next_update_key: Option<JsonWebKey>,
+    pub next_recovery_key: Option<JsonWebKey>,
     pub patches: Option<Vec<Patch>>,
 }
 

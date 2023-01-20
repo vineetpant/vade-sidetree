@@ -36,6 +36,8 @@ pub struct JsonWebKey {
     pub y: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub d: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

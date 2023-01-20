@@ -26,6 +26,7 @@ use std::error::Error;
 use vade::{VadePlugin, VadePluginResultValue};
 use vade_sidetree_client::{
     did::JsonWebKey,
+    multihash,
     operations::{self, DeactivateOperationInput, OperationInput},
     operations::{RecoverOperationInput, UpdateOperationInput},
 };
@@ -202,11 +203,9 @@ impl VadePlugin for VadeSidetree {
         let update_operation = match update_payload.update_type {
             UpdateType::Update | UpdateType::Recovery => {
                 if update_payload.update_type == UpdateType::Update {
-                    check_commitment = update_payload
-                        .update_commitment
-                        .ok_or("update_commitment not valid")?
-                        .clone()
-                        .to_string();
+                    check_commitment = multihash::canonicalize_then_double_hash_then_encode(
+                        &update_payload.next_update_key,
+                    )?;
                     let operation = UpdateOperationInput::new()
                         .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
                         .with_patches(update_payload.patches.ok_or("patches not valid")?)
@@ -215,11 +214,12 @@ impl VadePlugin for VadeSidetree {
                     operation_type.push_str("update");
                     operations::update(operation)
                 } else {
-                    check_commitment = update_payload
-                        .update_commitment
-                        .ok_or("update_commitment not valid")?
-                        .clone()
-                        .to_string();
+                    check_commitment = multihash::canonicalize_then_double_hash_then_encode(
+                        &update_payload.next_update_key,
+                    )?;
+                    let recovery_commitment = multihash::canonicalize_then_double_hash_then_encode(
+                        &update_payload.next_recovery_key,
+                    )?;
                     let operation = RecoverOperationInput::new()
                         .with_did_suffix(did.split(":").last().ok_or("did not valid")?.to_string())
                         .with_patches(update_payload.patches.ok_or("patches not valid")?)
@@ -228,12 +228,7 @@ impl VadePlugin for VadeSidetree {
                                 .recovery_key
                                 .ok_or("recovery_key not valid")?,
                         )
-                        .with_recovery_commitment(
-                            update_payload
-                                .recovery_commitment
-                                .ok_or("recovery_commitment not valid")?
-                                .to_string(),
-                        )
+                        .with_recovery_commitment(recovery_commitment.to_string())
                         .with_update_commitment(check_commitment.clone());
                     operation_type.push_str("recover");
                     operations::recover(operation)
@@ -345,7 +340,7 @@ mod tests {
     use std::sync::Once;
     use vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
-        multihash, secp256k1, Patch,
+        secp256k1, Patch,
     };
 
     static INIT: Once = Once::new();
@@ -499,15 +494,12 @@ mod tests {
             public_keys: vec![update_key.clone()],
         });
 
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&update_key.public_key_jwk)?;
-
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
             update_key: Some(create_response.update_key),
-            update_commitment: Some(update_commitment),
+            next_update_key: update_key.public_key_jwk,
             patches: Some(vec![patch]),
-            recovery_commitment: None,
+            next_recovery_key: None,
             recovery_key: None,
         };
 
@@ -584,15 +576,12 @@ mod tests {
             public_keys: vec![update_key.clone()],
         });
 
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&update_key.public_key_jwk)?;
-
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
             update_key: Some(create_response.update_key),
-            update_commitment: Some(update_commitment),
+            next_update_key: update_key.public_key_jwk,
             patches: Some(vec![patch]),
-            recovery_commitment: None,
+            next_recovery_key: None,
             recovery_key: None,
         };
 
@@ -644,15 +633,12 @@ mod tests {
             ids: vec!["update_key".to_string()],
         });
 
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&new_update_key)?;
-
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
             update_key: Some(JsonWebKey::from(&key_pair)),
-            update_commitment: Some(update_commitment),
+            next_update_key: new_update_key.public_key_jwk,
             patches: Some(vec![patch]),
-            recovery_commitment: None,
+            next_recovery_key: None,
             recovery_key: None,
         };
 
@@ -729,15 +715,12 @@ mod tests {
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::KeyAgreement].to_vec()));
 
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&update_key.public_key_jwk)?;
-
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
             update_key: Some(create_response.update_key),
-            update_commitment: Some(update_commitment),
+            next_update_key: update_key.public_key_jwk,
             patches: Some(vec![patch]),
-            recovery_commitment: None,
+            next_recovery_key: None,
             recovery_key: None,
         };
 
@@ -815,15 +798,12 @@ mod tests {
         let mut update1_public_key: JsonWebKey = (&update1_key_pair).into();
         update1_public_key.d = None;
 
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&update1_public_key)?;
-
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
             update_key: Some(create_response.update_key),
-            update_commitment: Some(update_commitment),
+            next_update_key: Some(update1_public_key),
             patches: Some(vec![patch]),
-            recovery_commitment: None,
+            next_recovery_key: None,
             recovery_key: None,
         };
 
@@ -862,15 +842,13 @@ mod tests {
         let update2_key_pair = secp256k1::KeyPair::random();
         let mut update2_public_key: JsonWebKey = (&update2_key_pair).into();
         update2_public_key.d = None;
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&update2_public_key)?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Update,
             update_key: Some((&update1_key_pair).into()),
-            update_commitment: Some(update_commitment),
+            next_update_key: Some(update2_public_key),
+            next_recovery_key: None,
             patches: Some(vec![patch]),
-            recovery_commitment: None,
             recovery_key: None,
         };
 
@@ -960,19 +938,13 @@ mod tests {
             },
         });
 
-        let recovery_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&recover1_public_key)?;
-
-        let update_commitment =
-            multihash::canonicalize_then_double_hash_then_encode(&update1_public_key)?;
-
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Recovery,
-            update_key: Some(update1_public_key),
-            update_commitment: Some(update_commitment),
+            update_key: Some(create_response.update_key),
+            next_update_key: Some(update1_public_key),
             patches: Some(vec![patch]),
-            recovery_commitment: Some(recovery_commitment),
             recovery_key: Some(create_response.recovery_key),
+            next_recovery_key: Some(recover1_public_key),
         };
 
         let _result = did_handler
@@ -1036,10 +1008,10 @@ mod tests {
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Deactivate,
             update_key: None,
-            update_commitment: None,
+            next_update_key: None,
             patches: None,
-            recovery_commitment: None,
             recovery_key: Some(create_response.recovery_key),
+            next_recovery_key: None,
         };
 
         let result = did_handler

@@ -67,6 +67,7 @@ impl From<&KeyPair> for JsonWebKey {
                 .secret_key
                 .as_ref()
                 .map(|secret_key| encode(secret_key.serialize())),
+            nonce: None,
         }
     }
 }
