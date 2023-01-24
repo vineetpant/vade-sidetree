@@ -1,4 +1,4 @@
-use did::{Document, JsonWebKey, PublicKey, Service};
+use did::{Document, JsonWebKey, JsonWebKeyPublic, PublicKey, Service};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -14,8 +14,6 @@ pub struct Delta {
 pub struct SuffixData {
     pub delta_hash: String,
     pub recovery_commitment: String,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    pub data_type: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -29,7 +27,7 @@ pub struct SignedUpdateDataPayload {
 #[serde(rename_all = "camelCase")]
 pub struct SignedRecoveryDataPayload {
     pub delta_hash: String,
-    pub recovery_key: JsonWebKey,
+    pub recovery_key: JsonWebKeyPublic,
     pub recovery_commitment: String,
 }
 
@@ -37,7 +35,7 @@ pub struct SignedRecoveryDataPayload {
 #[serde(rename_all = "camelCase")]
 pub struct SignedDeactivateDataPayload {
     pub did_suffix: String,
-    pub recovery_key: JsonWebKey,
+    pub recovery_key: JsonWebKeyPublic,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
