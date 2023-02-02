@@ -1,0 +1,12 @@
+on: [push]
+
+name: Tests
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout vade-sidetree
+        uses: actions/checkout@v2
+      - name: Run cargo test
+        run: cargo test --release --all-features --no-fail-fast

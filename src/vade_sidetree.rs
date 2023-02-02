@@ -122,12 +122,12 @@ impl VadePlugin for VadeSidetree {
             return Ok(VadePluginResultValue::Ignored);
         }
         let options: CreateDidOptions = serde_json::from_str(options)?;
-        let result: CreateDidPayload = serde_json::from_str(payload)?;
+        let payload: CreateDidPayload = serde_json::from_str(payload)?;
         let config = OperationInput {
-            public_keys: result.public_keys,
-            services: result.services,
-            update_key: result.update_key,
-            recovery_key: result.recovery_key,
+            public_keys: payload.public_keys,
+            services: payload.services,
+            update_key: payload.update_key,
+            recovery_key: payload.recovery_key,
         };
         let create_operation = operations::create(Some(config));
         let create_output = match create_operation {
@@ -205,16 +205,14 @@ impl VadePlugin for VadeSidetree {
         let mut operation_type: String = String::new();
         let mut api_url = self.config.sidetree_rest_api_url.clone();
         let client = reqwest::Client::new();
-        let mut check_commitment: String = String::new();
         api_url.push_str("operations");
 
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
+        let check_commitment =
+            multihash::canonicalize_then_double_hash_then_encode(&update_payload.next_update_key)?;
         let update_operation = match update_payload.update_type {
             UpdateType::Update | UpdateType::Recovery => {
                 if update_payload.update_type == UpdateType::Update {
-                    check_commitment = multihash::canonicalize_then_double_hash_then_encode(
-                        &update_payload.next_update_key,
-                    )?;
                     let operation = UpdateOperationInput::new()
                         .with_did_suffix(did.split(':').last().ok_or("did not valid")?.to_string())
                         .with_patches(update_payload.patches.ok_or("patches not valid")?)
@@ -223,9 +221,6 @@ impl VadePlugin for VadeSidetree {
                     operation_type.push_str("update");
                     operations::update(operation)
                 } else {
-                    check_commitment = multihash::canonicalize_then_double_hash_then_encode(
-                        &update_payload.next_update_key,
-                    )?;
                     let recovery_commitment = multihash::canonicalize_then_double_hash_then_encode(
                         &update_payload.next_recovery_key,
                     )?;
@@ -413,7 +408,7 @@ mod tests {
 
         let result_value = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let parsed_payload: CreateDidPayload = serde_json::from_str(payload)?;
@@ -449,7 +444,7 @@ mod tests {
 
         let response = match result {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -460,7 +455,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -506,7 +501,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -518,7 +513,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -566,7 +561,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -578,7 +573,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -607,7 +602,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -640,7 +635,7 @@ mod tests {
 
         let _response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
         };
 
         // after update, resolve and check if there are 2 public keys in the DID document
@@ -650,7 +645,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -689,7 +684,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -722,7 +717,7 @@ mod tests {
 
         let _response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
         };
 
         // after update, resolve and check if there are 2 public keys in the DID document
@@ -732,7 +727,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -776,7 +771,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let _respone = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
         };
 
         // after update, resolve and check if there are 2 public keys in the DID document
@@ -786,7 +781,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -816,7 +811,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -855,7 +850,7 @@ mod tests {
 
         let _response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
         };
 
         // after update, resolve and check if there is the new added service
@@ -865,7 +860,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -898,7 +893,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -943,7 +938,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -988,7 +983,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1016,7 +1011,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -1028,7 +1023,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1075,7 +1070,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1112,7 +1107,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -1124,7 +1119,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1172,7 +1167,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1205,7 +1200,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -1217,7 +1212,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(
@@ -1263,7 +1258,7 @@ mod tests {
         assert_eq!(result.is_ok(), true);
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1300,7 +1295,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
@@ -1337,7 +1332,7 @@ mod tests {
 
         let response = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
         };
 
         let create_response: DidCreateResponse = serde_json::from_str(&response)?;
@@ -1367,7 +1362,7 @@ mod tests {
 
         let did_resolve = match result? {
             VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result".to_string())),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
         };
 
         let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
