@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vade_sidetree_client::{
@@ -58,6 +60,8 @@ pub struct DidDocument {
     pub context: Value,
     pub verification_method: Option<Vec<KeyAgreement>>,
     pub service: Option<Vec<Service>>,
+    #[serde(flatten)]
+    pub extra: HashMap<String, Value>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

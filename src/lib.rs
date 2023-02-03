@@ -38,6 +38,6 @@
 //! [`VadeSidetree `]: https://git.slock.it/equs/interop/vade/vade-sidetree
 //! [`VadePlugin`]: https://docs.rs/vade/*/vade/trait.VadePlugin.html
 
-mod datatypes;
+pub mod datatypes;
 mod vade_sidetree;
 pub use self::vade_sidetree::*;
