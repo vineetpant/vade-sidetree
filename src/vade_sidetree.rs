@@ -127,9 +127,11 @@ impl VadePlugin for VadeSidetree {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!("{}", err))),
         };
+        #[cfg(not(feature = "sdk"))]
         let json = serde_json::to_string(&create_output)?;
         let mut api_url = self.config.sidetree_rest_api_url.clone();
         api_url.push_str("operations");
+        #[cfg(not(feature = "sdk"))]
         let create_result: DIDCreateResult = serde_json::from_str(&json)?;
 
         #[cfg(feature = "sdk")]
