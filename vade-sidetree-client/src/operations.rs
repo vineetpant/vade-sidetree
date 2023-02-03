@@ -1,5 +1,5 @@
 use crate::encoder::decode;
-use crate::multihash::{canonicalize_then_double_hash_then_encode, hash_then_encode};
+use crate::multihash::canonicalize_then_double_hash_then_encode;
 use crate::{
     did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
     SuffixData,
@@ -206,8 +206,8 @@ pub fn create<'a>(config: Option<OperationInput>) -> Result<OperationOutput, Err
 
 pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Error<'a>> {
     let document = Document {
-        public_keys: vec![],
-        services: None,
+        public_keys: config.public_keys,
+        services: config.services,
     };
     let patches = vec![Patch::Replace(ReplaceDocument { document })];
 
@@ -222,12 +222,8 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
         patches,
     };
 
-    let delta_hash = hash_then_encode(
-        serde_json::to_string(&delta)
-            .map_err(|_| Error::MissingField("Failed to canonicalize"))?
-            .as_bytes(),
-        crate::multihash::HashAlgorithm::Sha256,
-    );
+    let delta_hash =
+        canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
 
     let recovery_key = config
         .recovery_key
@@ -239,7 +235,6 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
         delta_hash,
         recovery_commitment: canonicalize_then_double_hash_then_encode(&recovery_key_public)
             .unwrap(),
-        data_type: None,
     };
 
     let did_suffix = compute_unique_suffix(&suffix_data);
@@ -255,7 +250,7 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
 
 pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(config.update_key.x).unwrap();
-    let mut public_key_y = decode(config.update_key.y).unwrap();
+    let mut public_key_y = decode(config.update_key.y.unwrap()).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
     full_pub_key.append(&mut vec![0x04]);
     full_pub_key.append(&mut public_key_x);
@@ -334,7 +329,7 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
 
 pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(config.recover_key.x).unwrap();
-    let mut public_key_y = decode(config.recover_key.y).unwrap();
+    let mut public_key_y = decode(config.recover_key.y.unwrap()).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
     full_pub_key.append(&mut vec![0x04]);
     full_pub_key.append(&mut public_key_x);
@@ -355,8 +350,8 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
         secret_key,
     };
 
-    let mut recovery_key_public: JsonWebKey = (&recovery_keypair).into();
-    recovery_key_public.d = None;
+    let mut recovery_key_public: JsonWebKeyPublic = (&recovery_keypair).into();
+    recovery_key_public.nonce = config.recover_key.nonce;
 
     let delta = Delta {
         update_commitment: config.update_commitment,
@@ -416,7 +411,7 @@ pub fn deactivate<'a>(
     config: DeactivateOperationInput,
 ) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(config.recover_key.x).unwrap();
-    let mut public_key_y = decode(config.recover_key.y).unwrap();
+    let mut public_key_y = decode(config.recover_key.y.unwrap()).unwrap();
     let mut full_pub_key = Vec::<u8>::new();
     full_pub_key.append(&mut vec![0x04]);
     full_pub_key.append(&mut public_key_x);
@@ -437,9 +432,8 @@ pub fn deactivate<'a>(
         secret_key,
     };
 
-    let mut recovery_key_public: JsonWebKey = (&recovery_keypair).into();
-    recovery_key_public.d = None;
-
+    let mut recovery_key_public: JsonWebKeyPublic = (&recovery_keypair).into();
+    recovery_key_public.nonce = config.recover_key.nonce;
     let signed_data_payload = SignedDeactivateDataPayload {
         recovery_key: recovery_key_public.clone(),
         did_suffix: config.did_suffix.clone(),
@@ -477,7 +471,6 @@ pub fn deactivate<'a>(
         &recovery_key_public.clone(),
         crate::multihash::HashAlgorithm::Sha256,
     );
-
     let operation = Operation::Deactivate(config.did_suffix, message, reveal_value);
 
     Ok(UpdateOperationOutput {
@@ -507,6 +500,7 @@ mod test {
     #[test]
     fn generate_create_operation_with_input() {
         let public_key = PublicKey {
+            controller: None,
             id: "key-1".into(),
             purposes: Some(vec![Purpose::Authentication, Purpose::CapabilityDelegation]),
             key_type: "SampleVerificationKey2020".into(),

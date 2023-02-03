@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Document {
-    pub public_keys: Vec<PublicKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub public_keys: Option<Vec<PublicKey>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub services: Option<Vec<Service>>,
 }
@@ -17,6 +18,8 @@ pub struct Document {
 #[serde(rename_all = "camelCase")]
 pub struct PublicKey {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub controller: Option<String>,
     #[serde(rename = "type")]
     pub key_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -27,15 +30,32 @@ pub struct PublicKey {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
+pub struct JsonWebKeyPublic {
+    #[serde(rename = "kty")]
+    pub key_type: String,
+    #[serde(rename = "crv")]
+    pub curve: String,
+    pub x: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub y: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct JsonWebKey {
     #[serde(rename = "kty")]
     pub key_type: String,
     #[serde(rename = "crv")]
     pub curve: String,
     pub x: String,
-    pub y: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub y: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub d: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

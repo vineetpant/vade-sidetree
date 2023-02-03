@@ -1,7 +1,7 @@
 use secp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 
 use crate::{
-    did::{JsonWebKey, Purpose},
+    did::{JsonWebKey, JsonWebKeyPublic, Purpose},
     encoder::encode,
 };
 
@@ -33,6 +33,7 @@ impl KeyPair {
 
         crate::PublicKey {
             id,
+            controller: None,
             key_type: "EcdsaSecp256k1VerificationKey2019".to_string(),
             purposes,
             public_key_jwk: Some(jwk),
@@ -62,11 +63,38 @@ impl From<&KeyPair> for JsonWebKey {
             key_type: "EC".into(),
             curve: "secp256k1".into(),
             x: encode(serialized_public_key[1..33].as_ref()),
-            y: encode(serialized_public_key[33..65].as_ref()),
+            y: Some(encode(serialized_public_key[33..65].as_ref())),
             d: keypair
                 .secret_key
                 .as_ref()
                 .map(|secret_key| encode(secret_key.serialize())),
+            nonce: None,
+        }
+    }
+}
+
+impl From<&KeyPair> for JsonWebKeyPublic {
+    fn from(keypair: &KeyPair) -> Self {
+        let serialized_public_key = keypair.public_key.serialize();
+
+        JsonWebKeyPublic {
+            key_type: "EC".into(),
+            curve: "secp256k1".into(),
+            x: encode(serialized_public_key[1..33].as_ref()),
+            y: Some(encode(serialized_public_key[33..65].as_ref())),
+            nonce: None,
+        }
+    }
+}
+
+impl From<&JsonWebKey> for JsonWebKeyPublic {
+    fn from(key: &JsonWebKey) -> Self {
+        JsonWebKeyPublic {
+            key_type: "EC".into(),
+            curve: "secp256k1".into(),
+            x: key.x.clone(),
+            y: key.y.clone(),
+            nonce: key.nonce.clone(),
         }
     }
 }

@@ -1,6 +1,11 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use vade_sidetree_client::{did::JsonWebKey, Delta, Patch, SuffixData};
+use vade_sidetree_client::{
+    did::{JsonWebKey, JsonWebKeyPublic},
+    Delta, Patch, SuffixData,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
@@ -55,6 +60,8 @@ pub struct DidDocument {
     pub context: Value,
     pub verification_method: Option<Vec<KeyAgreement>>,
     pub service: Option<Vec<Service>>,
+    #[serde(flatten)]
+    pub extra: HashMap<String, Value>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -64,7 +71,7 @@ pub struct KeyAgreement {
     pub controller: String,
     #[serde(rename = "type")]
     pub type_field: String,
-    pub public_key_jwk: JsonWebKey,
+    pub public_key_jwk: JsonWebKeyPublic,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -97,8 +104,8 @@ pub struct DidUpdatePayload {
     pub update_type: UpdateType,
     pub update_key: Option<JsonWebKey>,
     pub recovery_key: Option<JsonWebKey>,
-    pub update_commitment: Option<String>,
-    pub recovery_commitment: Option<String>,
+    pub next_update_key: Option<JsonWebKeyPublic>,
+    pub next_recovery_key: Option<JsonWebKeyPublic>,
     pub patches: Option<Vec<Patch>>,
 }
 
