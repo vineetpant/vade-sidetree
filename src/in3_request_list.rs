@@ -28,7 +28,7 @@ pub fn send_request(
     let path = CString::new("")?;
     let path = path.as_ptr();
 
-    let payload = CString::new(payload.ok_or("")?)?;
+    let payload = CString::new(payload.unwrap_or("")?)?;
     let payload = payload.as_ptr();
 
     let mut res: *mut c_char = std::ptr::null_mut();
