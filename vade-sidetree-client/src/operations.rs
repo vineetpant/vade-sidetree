@@ -8,7 +8,7 @@ use crate::{
     Error, ReplaceDocument, SignedDeactivateDataPayload, SignedRecoveryDataPayload,
     SignedUpdateDataPayload,
 };
-use secp256k1::SecretKey;
+use libsecp256k1::SecretKey;
 use serde::{ser::SerializeMap, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -264,7 +264,7 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
         secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
         secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
     }
-    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+    let public_key = libsecp256k1::PublicKey::parse(&public_key_arr).unwrap();
 
     let update_keypair = KeyPair {
         public_key,
@@ -344,7 +344,7 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
         secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
         secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
     }
-    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+    let public_key = libsecp256k1::PublicKey::parse(&public_key_arr).unwrap();
 
     let recovery_keypair = KeyPair {
         public_key,
@@ -426,7 +426,7 @@ pub fn deactivate<'a>(
         secret_key_arr.copy_from_slice(&secret_key_decoded[0..32]);
         secret_key = Some(SecretKey::parse(&secret_key_arr).unwrap());
     }
-    let public_key = secp256k1::PublicKey::parse(&public_key_arr).unwrap();
+    let public_key = libsecp256k1::PublicKey::parse(&public_key_arr).unwrap();
 
     let recovery_keypair = KeyPair {
         public_key,
