@@ -273,6 +273,7 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
 
     let mut update_key_public: JsonWebKey = (&update_keypair).into();
     update_key_public.d = None;
+    update_key_public.nonce = config.update_key.nonce;
 
     let delta = Delta {
         update_commitment: config.update_commitment,

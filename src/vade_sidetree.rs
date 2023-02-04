@@ -310,19 +310,19 @@ impl VadePlugin for VadeSidetree {
     /// * `did` - did to fetch data for
     async fn did_resolve(
         &mut self,
-        did_id: &str,
+        did: &str,
     ) -> Result<VadePluginResultValue<Option<String>>, Box<dyn Error>> {
-        if !did_id.starts_with(EVAN_METHOD) {
+        if !did.starts_with(EVAN_METHOD) {
             return Ok(VadePluginResultValue::Ignored);
         }
         let re = Regex::new(METHOD_REGEX)?;
-        let is_ethereum_did = re.is_match(did_id);
+        let is_ethereum_did = re.is_match(did);
 
         if is_ethereum_did {
             return Ok(VadePluginResultValue::Ignored);
         }
 
-        let res = resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did_id).await?;
+        let res = resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did).await?;
 
         Ok(VadePluginResultValue::Success(Some(res)))
     }
@@ -995,6 +995,297 @@ mod tests {
     #[tokio::main]
     #[test]
     #[serial]
+    async fn can_update_did_remove_services_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        // first create a new DID on sidetree
+        let result = did_handler
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
+            .await;
+        assert!(result.is_ok());
+
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
+        };
+
+        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+
+        let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
+
+        let service = Service {
+            id: "sds".to_string(),
+            service_type: "SecureDataStrore".to_string(),
+            service_endpoint: service_endpoint.clone(),
+        };
+
+        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+            services: vec![service],
+        });
+
+        let mut update1_key_pair = create_response.update_key.clone();
+        update1_key_pair.nonce = Some('1'.to_string());
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(create_response.update_key.clone()),
+            next_update_key: Some((&update1_key_pair).into()),
+            patches: Some(vec![patch]),
+            next_recovery_key: None,
+            recovery_key: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if there is the new added service
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+
+        let did_document_services = resolve_result
+            .did_document
+            .service
+            .ok_or("No Services defined")?;
+        assert_eq!(did_document_services.len(), 1);
+        assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
+
+        let patch: Patch = Patch::RemoveServices(vade_sidetree_client::RemoveServices {
+            ids: vec!["sds".to_string()],
+        });
+
+        let mut update2_key_pair = create_response.update_key.clone();
+        update2_key_pair.nonce = Some('2'.to_string());
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(update1_key_pair),
+            next_update_key: Some((&update2_key_pair).into()),
+            next_recovery_key: None,
+            patches: Some(vec![patch]),
+            recovery_key: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if the service is removed
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        assert!(result.is_ok());
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(resolve_result.did_document.service.is_none(), true);
+
+        Ok(())
+    }
+
+    #[tokio::main]
+    #[test]
+    async fn can_update_did_three_times_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
+        enable_logging();
+
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        // first create a new DID on sidetree
+        let result = did_handler
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                "{}",
+            )
+            .await;
+        assert!(result.is_ok());
+
+        let response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
+        };
+
+        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+
+        let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
+
+        let service = Service {
+            id: "sds".to_string(),
+            service_type: "SecureDataStrore".to_string(),
+            service_endpoint: service_endpoint.clone(),
+        };
+
+        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+            services: vec![service],
+        });
+
+        let mut update1_key_pair = create_response.update_key.clone();
+        update1_key_pair.nonce = Some('1'.to_string());
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(create_response.update_key.clone()),
+            next_update_key: Some((&update1_key_pair).into()),
+            patches: Some(vec![patch]),
+            next_recovery_key: None,
+            recovery_key: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if there is the new added service
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+
+        let did_document_services = resolve_result
+            .did_document
+            .service
+            .ok_or("No Services defined")?;
+        assert_eq!(did_document_services.len(), 1);
+        assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
+
+        let patch: Patch = Patch::RemoveServices(vade_sidetree_client::RemoveServices {
+            ids: vec!["sds".to_string()],
+        });
+
+        let mut update2_key_pair = create_response.update_key.clone();
+        update2_key_pair.nonce = Some('2'.to_string());
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(update1_key_pair),
+            next_update_key: Some((&update2_key_pair).into()),
+            next_recovery_key: None,
+            patches: Some(vec![patch]),
+            recovery_key: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if the service is removed
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        assert!(result.is_ok());
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        assert_eq!(resolve_result.did_document.service.is_none(), true);
+
+        let service = Service {
+            id: "sds".to_string(),
+            service_type: "SecureDataStrore".to_string(),
+            service_endpoint: service_endpoint.clone(),
+        };
+
+        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+            services: vec![service],
+        });
+
+        let mut update3_key_pair = create_response.update_key.clone();
+        update3_key_pair.nonce = Some('3'.to_string());
+
+        let update_payload = DidUpdatePayload {
+            update_type: UpdateType::Update,
+            update_key: Some(update2_key_pair),
+            next_update_key: Some((&update3_key_pair).into()),
+            patches: Some(vec![patch]),
+            next_recovery_key: None,
+            recovery_key: None,
+        };
+
+        let result = did_handler
+            .did_update(
+                &create_response.did.did_document.id,
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        assert_eq!(result.is_ok(), true);
+
+        // after update, resolve and check if there is the new added service
+        let result = did_handler
+            .did_resolve(&create_response.did.did_document.id)
+            .await;
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
+        };
+
+        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+
+        let did_document_services = resolve_result
+            .did_document
+            .service
+            .ok_or("No Services defined")?;
+        assert_eq!(did_document_services.len(), 1);
+        assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
+
+        Ok(())
+    }
+
+    #[tokio::main]
+    #[test]
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
