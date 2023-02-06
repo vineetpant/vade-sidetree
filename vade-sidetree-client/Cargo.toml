@@ -10,7 +10,7 @@ license = "Apache-2.0"
 
 [dependencies]
 serde_jcs = "0.1"
-libsecp256k1 = "0.3"
+libsecp256k1 = "0.5"
 getrandom = { version = "0.2", features = ["js"] }
 sha2 = "0.9.5"
 multihash = "0.13"
