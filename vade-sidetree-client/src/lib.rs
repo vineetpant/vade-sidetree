@@ -75,7 +75,7 @@ pub struct JsonPatch {
 pub struct IetfJsonPatch {
     pub op: String,
     pub path: String,
-    pub value: Vec<Value>,
+    pub value: Value,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
