@@ -1115,6 +1115,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
+    #[serial]
     async fn can_update_did_three_times_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -1286,6 +1287,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
+    #[serial]
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
