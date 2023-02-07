@@ -17,12 +17,18 @@ extern crate regex;
 extern crate vade;
 
 use crate::datatypes::*;
+#[cfg(feature = "sdk")]
+use crate::in3_request_list::{send_request, ResolveHttpRequest};
 use async_std::task;
 use async_trait::async_trait;
 use core::time;
 use regex::Regex;
+#[cfg(not(feature = "sdk"))]
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+#[cfg(feature = "sdk")]
+use std::os::raw::c_void;
 use vade::{VadePlugin, VadePluginResultValue};
 use vade_sidetree_client::{
     did::{JsonWebKey, PublicKey, Service},
@@ -86,18 +92,61 @@ pub struct VadeSidetree {
 
 impl VadeSidetree {
     /// Creates new instance of `VadeSidetree`.
-    pub fn new(sidetree_rest_api_url: Option<String>) -> VadeSidetree {
+    pub fn new(
+        #[cfg(feature = "sdk")] request_id: *const c_void,
+        #[cfg(feature = "sdk")] resolve_http_request: ResolveHttpRequest,
+        sidetree_rest_api_url: Option<String>,
+    ) -> VadeSidetree {
         // Setting default value for sidetree api url
         // If environment variable is found and it contains some value, it will replace default value
         let url = sidetree_rest_api_url.unwrap_or_else(|| DEFAULT_URL.to_string());
 
         let config = SideTreeConfig {
+            #[cfg(feature = "sdk")]
+            request_id,
+            #[cfg(feature = "sdk")]
+            resolve_http_request,
             sidetree_rest_api_url: url,
         };
         match env_logger::try_init() {
             Ok(_) | Err(_) => (),
         };
         VadeSidetree { config }
+    }
+
+    async fn resolve_sidetree_did(
+        &self,
+        base_url: String,
+        did: &str,
+    ) -> Result<String, Box<dyn Error>> {
+        let mut api_url = base_url;
+        api_url.push_str("identifiers/");
+        api_url.push_str(did);
+
+        let res: String;
+
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "sdk")] {
+                res = send_request(
+                    api_url,
+                    "GET".to_string(),
+                    None,
+                    self.config.request_id,
+                    self.config.resolve_http_request,
+                )?;
+            } else {
+                let client = reqwest::Client::new();
+                res = client
+                    .get(api_url)
+                    .send()
+                    .await?
+                    .text()
+                    .await
+                    .map_err(|err| format!("DID resolve request failed; {}", &err.to_string()))?;
+            }
+        }
+
+        Ok(res)
     }
 }
 
@@ -139,14 +188,35 @@ impl VadePlugin for VadeSidetree {
         api_url.push_str("operations");
         let create_result: DIDCreateResult = serde_json::from_str(&json)?;
 
-        let client = reqwest::Client::new();
-        let res = client
-            .post(api_url)
-            .json(&create_result.operation_request)
-            .send()
-            .await?
-            .text()
-            .await?;
+        #[cfg(feature = "sdk")]
+        let request_pointer = self.config.request_id.clone();
+
+        #[cfg(feature = "sdk")]
+        let resolve_http_request = self.config.resolve_http_request;
+
+        let res: String;
+
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "sdk")]{
+                res = send_request(
+                    api_url,
+                    "POST".to_string(),
+                    Some(serde_json::to_string(&create_output.operation_request)?),
+                    request_pointer, resolve_http_request,
+                )?.to_string();
+            } else {
+                let client = reqwest::Client::new();
+                res = client
+                    .post(api_url)
+                    .json(&create_result.operation_request)
+                    .send()
+                    .await?
+                    .text()
+                    .await?;
+
+            }
+        }
+
         let response = DidCreateResponse {
             update_key: create_result.update_key,
             recovery_key: create_result.recovery_key,
@@ -157,11 +227,12 @@ impl VadePlugin for VadeSidetree {
             let mut update_found = false;
             let mut timeout_counter = 0;
             while !update_found {
-                let res = resolve_sidetree_did(
-                    self.config.sidetree_rest_api_url.clone(),
-                    &response.did.did_document.id,
-                )
-                .await?;
+                let res = self
+                    .resolve_sidetree_did(
+                        self.config.sidetree_rest_api_url.clone(),
+                        &response.did.did_document.id,
+                    )
+                    .await?;
                 if res != "Not Found" {
                     update_found = true;
                 } else {
@@ -204,7 +275,15 @@ impl VadePlugin for VadeSidetree {
         let options: UpdateDidOptions = serde_json::from_str(options)?;
         let mut operation_type: String = String::new();
         let mut api_url = self.config.sidetree_rest_api_url.clone();
-        let client = reqwest::Client::new();
+        #[cfg(not(feature = "sdk"))]
+        let client = Client::new();
+
+        #[cfg(feature = "sdk")]
+        let request_pointer = self.config.request_id.clone();
+
+        #[cfg(feature = "sdk")]
+        let resolve_http_request = self.config.resolve_http_request;
+
         api_url.push_str("operations");
 
         let update_payload: DidUpdatePayload = serde_json::from_str(payload)?;
@@ -255,20 +334,23 @@ impl VadePlugin for VadeSidetree {
             Ok(value) => value,
             Err(err) => return Err(Box::from(format!("{err}"))),
         };
-        let res = client
-            .post(api_url)
-            .json(&update_output.operation_request)
-            .send()
-            .await?
-            .text()
-            .await?;
+
+        let res;
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "sdk")]{
+                res = send_request(api_url, "POST".to_string(), Some(serde_json::to_string(&update_output.operation_request)?), request_pointer, resolve_http_request)?
+            } else {
+                res = client.post(api_url).json(&update_output.operation_request).send().await?.text().await?
+            }
+        }
 
         if options.wait_for_completion == Some(true) {
             let mut update_found = false;
             let mut timeout_counter = 0;
             while !update_found {
-                let res =
-                    resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did).await?;
+                let res = self
+                    .resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did)
+                    .await?;
                 if res != "Not Found" {
                     let did_document: SidetreeDidDocument = serde_json::from_str(&res)?;
                     match update_payload.update_type {
@@ -300,6 +382,7 @@ impl VadePlugin for VadeSidetree {
                 }
             }
         }
+
         Ok(VadePluginResultValue::Success(Some(res)))
     }
 
@@ -322,19 +405,12 @@ impl VadePlugin for VadeSidetree {
             return Ok(VadePluginResultValue::Ignored);
         }
 
-        let res = resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did_id).await?;
+        let res = self
+            .resolve_sidetree_did(self.config.sidetree_rest_api_url.clone(), did_id)
+            .await?;
 
         Ok(VadePluginResultValue::Success(Some(res)))
     }
-}
-
-async fn resolve_sidetree_did(base_url: String, did: &str) -> Result<String, reqwest::Error> {
-    let mut api_url = base_url;
-    api_url.push_str("identifiers/");
-    api_url.push_str(did);
-
-    let client = reqwest::Client::new();
-    client.get(api_url).send().await?.text().await
 }
 
 #[cfg(test)]
