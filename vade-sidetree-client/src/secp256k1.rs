@@ -1,4 +1,4 @@
-use secp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
+use libsecp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 
 use crate::{
     did::{JsonWebKey, JsonWebKeyPublic, Purpose},
@@ -13,16 +13,16 @@ pub struct KeyPair {
 
 impl KeyPair {
     pub fn sign(&self, message: &[u8]) -> (Signature, RecoveryId) {
-        secp256k1::sign(
+        libsecp256k1::sign(
             &Message::parse_slice(message).unwrap(),
             &self.secret_key.as_ref().unwrap(),
         )
     }
 
     pub fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
-        secp256k1::verify(
+        libsecp256k1::verify(
             &Message::parse_slice(message).unwrap(),
-            &Signature::parse_slice(signature).unwrap(),
+            &Signature::parse_standard_slice(signature).unwrap(),
             &self.public_key,
         )
     }
