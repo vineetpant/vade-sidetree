@@ -891,7 +891,6 @@ mod tests {
     async fn can_update_did_remove_services_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        // first create a new DID on sidetree
         let create_response = helper_create_did("{}".to_string()).await?;
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
@@ -952,7 +951,6 @@ mod tests {
 
         // after update, resolve and check if the service is removed
         let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
-
         assert_eq!(resolve_result.did_document.service.is_none(), true);
 
         Ok(())
