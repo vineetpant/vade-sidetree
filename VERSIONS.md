@@ -9,6 +9,8 @@
 
 ### Fixes
 
+- Fix the correct payload for IETF json patches
+
 ### Deprecations
 
 ## v0.0.3

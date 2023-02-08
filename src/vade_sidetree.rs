@@ -355,6 +355,62 @@ mod tests {
         });
     }
 
+    async fn helper_create_did(
+        payload: String,
+    ) -> Result<DidCreateResponse, Box<dyn std::error::Error>> {
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        // first create a new DID on sidetree
+        let result = did_handler
+            .did_create(
+                "did:evan",
+                "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
+                &payload,
+            )
+            .await?;
+
+        let response = match result {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did create".to_string())),
+        };
+
+        Ok(parse!(&response, "DID create response"))
+    }
+
+    async fn helper_resolve_did(
+        did: &str,
+    ) -> Result<SidetreeDidDocument, Box<dyn std::error::Error>> {
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler.did_resolve(did).await;
+
+        let did_resolve = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
+        };
+
+        Ok(parse!(&did_resolve, "DID resolve response"))
+    }
+
+    async fn helper_update_did(
+        did: &str,
+        update_payload: DidUpdatePayload,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
+        let result = did_handler
+            .did_update(
+                did,
+                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
+                &serde_json::to_string(&update_payload)?,
+            )
+            .await;
+
+        let _response = match result? {
+            VadePluginResultValue::Success(Some(value)) => value.to_string(),
+            _ => return Err(Box::from("Unknown Result for did update".to_string())),
+        };
+
+        Ok(())
+    }
+
     #[tokio::main]
     #[test]
     #[serial]
@@ -431,34 +487,11 @@ mod tests {
     #[serial]
     async fn can_resolve_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
-        // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
-                "{}",
-            )
-            .await?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
-        let response = match result {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(
             resolve_result.did_document.id,
             create_response.did.did_document.id
@@ -472,7 +505,6 @@ mod tests {
     #[serial]
     async fn can_create_did_with_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
         let payload = r###"{
             "publicKeys": [{
@@ -488,41 +520,19 @@ mod tests {
              }]
         }"###;
 
-        // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                payload,
-            )
-            .await;
+        let create_response = helper_create_did(payload.to_string()).await?;
 
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // after update, resolve and check if there are 2 public keys in the DID document
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(
-            resolve_result.did_document.verification_method.is_some(),
+            create_response
+                .did
+                .did_document
+                .verification_method
+                .is_some(),
             true
         );
         assert_eq!(
-            resolve_result
+            create_response
+                .did
                 .did_document
                 .verification_method
                 .unwrap()
@@ -538,7 +548,6 @@ mod tests {
     #[serial]
     async fn can_create_did_with_services() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
         let payload = r###"{
             "services": [{
@@ -548,37 +557,10 @@ mod tests {
              }]
         }"###;
 
-        // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                payload,
-            )
-            .await;
+        let create_response = helper_create_did(payload.to_string()).await?;
 
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // after update, resolve and check if there are 2 public keys in the DID document
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(resolve_result.did_document.service.is_some(), true);
-        assert_eq!(resolve_result.did_document.service.unwrap().len(), 1);
+        assert_eq!(create_response.did.did_document.service.is_some(), true);
+        assert_eq!(create_response.did.did_document.service.unwrap().len(), 1);
 
         Ok(())
     }
@@ -588,24 +570,9 @@ mod tests {
     #[serial]
     async fn can_update_did_add_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         // then add a new public key to the DID
         let key_pair = secp256k1::KeyPair::random();
@@ -625,30 +592,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        let _response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there are 2 public keys in the DID document
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(
             resolve_result.did_document.verification_method.is_some(),
             true
@@ -670,24 +619,9 @@ mod tests {
     #[serial]
     async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
 
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         // then add a new public key to the DID
         let key_pair = secp256k1::KeyPair::random();
@@ -707,30 +641,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        let _response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there are 2 public keys in the DID document
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(
             resolve_result.did_document.verification_method.is_some(),
             true
@@ -760,31 +676,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &format!("did:evan:{}", &create_response.did.did_document.id),
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
-        let _respone = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there are 2 public keys in the DID document
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(
             resolve_result.did_document.verification_method.is_some(),
             false
@@ -798,23 +695,8 @@ mod tests {
     async fn can_update_did_add_service_endpoints() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -840,30 +722,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        let _response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there is the new added service
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         let did_document_services = resolve_result
             .did_document
             .service
@@ -880,23 +744,8 @@ mod tests {
     async fn can_update_did_remove_services() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -921,27 +770,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there is the new added service
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         let did_document_services = resolve_result
             .did_document
             .service
@@ -964,29 +798,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if the service is removed
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        assert!(result.is_ok());
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(resolve_result.did_document.service.is_none(), true);
 
         Ok(())
@@ -998,23 +815,8 @@ mod tests {
     async fn can_update_did_remove_services_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -1040,27 +842,11 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there is the new added service
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
         let did_document_services = resolve_result
             .did_document
@@ -1085,29 +871,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if the service is removed
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        assert!(result.is_ok());
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(resolve_result.did_document.service.is_none(), true);
 
         Ok(())
@@ -1119,23 +888,8 @@ mod tests {
     async fn can_update_did_three_times_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         let service_endpoint = "https://w3id.org/did-resolution/v1".to_string();
 
@@ -1161,27 +915,11 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there is the new added service
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
         let did_document_services = resolve_result
             .did_document
@@ -1206,29 +944,12 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if the service is removed
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        assert!(result.is_ok());
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did update".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         assert_eq!(resolve_result.did_document.service.is_none(), true);
 
         let service = Service {
@@ -1253,27 +974,11 @@ mod tests {
             recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                &"{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
-
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // after update, resolve and check if there is the new added service
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
         let did_document_services = resolve_result
             .did_document
@@ -1291,39 +996,8 @@ mod tests {
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // resolve DID
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(
-            resolve_result.did_document.id,
-            create_response.did.did_document.id
-        );
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         // try to recover DID
 
@@ -1347,26 +1021,11 @@ mod tests {
             next_recovery_key: Some((&recover1_key_pair).into()),
         };
 
-        let _result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // try to resolve DID after recovery
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        assert_eq!(result.is_ok(), true);
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
         // check if the replaced key is now in the document
         assert_eq!(
@@ -1387,39 +1046,8 @@ mod tests {
     async fn can_update_did_recover_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // resolve DID
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(
-            resolve_result.did_document.id,
-            create_response.did.did_document.id
-        );
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         // try to recover DID
 
@@ -1444,26 +1072,12 @@ mod tests {
             next_recovery_key: Some((&recover1_key_pair).into()),
         };
 
-        let _result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // try to resolve DID after recovery
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        assert_eq!(result.is_ok(), true);
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         // check if the replaced key is now in the document
         assert_eq!(
             resolve_result.did_document.verification_method.is_some(),
@@ -1480,38 +1094,8 @@ mod tests {
     {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
-
-        // resolve DID
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
-        assert_eq!(
-            resolve_result.did_document.id,
-            create_response.did.did_document.id
-        );
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         // try to recover DID
 
@@ -1535,26 +1119,13 @@ mod tests {
             recovery_key: Some(create_response.recovery_key.clone()),
             next_recovery_key: Some((&recover1_key_pair).into()),
         };
-        let _result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
+
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
         // try to resolve DID after recovery
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
-        assert_eq!(result.is_ok(), true);
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
         // check if the replaced key is now in the document
         assert_eq!(
             resolve_result.did_document.verification_method.is_some(),
@@ -1572,26 +1143,12 @@ mod tests {
             recovery_key: Some(deactivate_key_pair),
             next_recovery_key: None,
         };
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&deactivate_payload)?,
-            )
-            .await;
 
-        assert_eq!(result.is_ok(), true);
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, deactivate_payload).await?;
+
         // after update, resolve and check if the DID is deactivated
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
         // check if the replaced key is now in the document
         assert_eq!(
@@ -1612,23 +1169,8 @@ mod tests {
     async fn can_update_did_deactivate() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
-        let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         // first create a new DID on sidetree
-        let result = did_handler
-            .did_create(
-                "did:evan",
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                "{}",
-            )
-            .await;
-        assert!(result.is_ok());
-
-        let response = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did create".to_string())),
-        };
-
-        let create_response: DidCreateResponse = serde_json::from_str(&response)?;
+        let create_response = helper_create_did("{}".to_string()).await?;
 
         let update_payload = DidUpdatePayload {
             update_type: UpdateType::Deactivate,
@@ -1639,26 +1181,11 @@ mod tests {
             next_recovery_key: None,
         };
 
-        let result = did_handler
-            .did_update(
-                &create_response.did.did_document.id,
-                "{\"type\":\"sidetree\", \"waitForCompletion\":true}",
-                &serde_json::to_string(&update_payload)?,
-            )
-            .await;
+        // update the did document with our patches
+        helper_update_did(&create_response.did.did_document.id, update_payload).await?;
 
-        assert_eq!(result.is_ok(), true);
         // after update, resolve and check if the DID is deactivated
-        let result = did_handler
-            .did_resolve(&create_response.did.did_document.id)
-            .await;
-
-        let did_resolve = match result? {
-            VadePluginResultValue::Success(Some(value)) => value.to_string(),
-            _ => return Err(Box::from("Unknown Result for did resolve".to_string())),
-        };
-
-        let resolve_result: SidetreeDidDocument = serde_json::from_str(&did_resolve)?;
+        let resolve_result = helper_resolve_did(&create_response.did.did_document.id).await?;
 
         // check if the replaced key is now in the document
         assert_eq!(
