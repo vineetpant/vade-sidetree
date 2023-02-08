@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
+#[cfg(feature = "sdk")]
+use crate::in3_request_list::ResolveHttpRequest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+#[cfg(feature = "sdk")]
+use std::os::raw::c_void;
 use vade_sidetree_client::{
     did::{JsonWebKey, JsonWebKeyPublic},
     Delta, Patch, SuffixData,
 };
-
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub enum UpdateType {
@@ -40,6 +43,10 @@ pub struct SignedDataPayload {
 }
 
 pub struct SideTreeConfig {
+    #[cfg(feature = "sdk")]
+    pub request_id: *const c_void,
+    #[cfg(feature = "sdk")]
+    pub resolve_http_request: ResolveHttpRequest,
     pub sidetree_rest_api_url: String,
 }
 

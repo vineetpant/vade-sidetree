@@ -9,6 +9,8 @@
 
 ### Fixes
 
+- fix in3 request list fallback payload
+
 ### Deprecations
 
 ## v0.0.3
