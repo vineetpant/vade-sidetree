@@ -10,6 +10,7 @@
 ### Fixes
 
 - Fix the correct payload for IETF json patches
+- fix in3 request list fallback payload
 
 ### Deprecations
 
