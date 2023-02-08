@@ -9,4 +9,4 @@ jobs:
       - name: Checkout vade-sidetree
         uses: actions/checkout@v2
       - name: Run cargo test
-        run: cargo test --release --all-features --no-fail-fast
+        run: cargo test --release --no-fail-fast

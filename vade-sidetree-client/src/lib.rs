@@ -1,5 +1,6 @@
 use did::{Document, JsonWebKey, JsonWebKeyPublic, PublicKey, Service};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fmt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -65,6 +66,18 @@ pub struct ReplaceDocument {
     pub document: Document,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonPatch {
+    pub patches: Vec<IetfJsonPatch>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IetfJsonPatch {
+    pub op: String,
+    pub path: String,
+    pub value: Value,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "action")]
 #[serde(rename_all(serialize = "kebab-case", deserialize = "kebab-case"))]
@@ -74,7 +87,7 @@ pub enum Patch {
     AddServices(AddServices),
     RemoveServices(RemoveServices),
     Replace(ReplaceDocument),
-    IetfJsonPatch,
+    IetfJsonPatch(JsonPatch),
 }
 
 #[derive(Debug, Clone, PartialEq)]
