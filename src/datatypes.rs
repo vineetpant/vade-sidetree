@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(feature = "sdk")]
 use std::os::raw::c_void;
-#[allow(unused_imports)]
-use vade_sidetree_client::{
+
+pub use vade_sidetree_client::{
     did::{JsonWebKey, JsonWebKeyPublic, PublicKey, Purpose, Service},
     Delta, Patch, SuffixData, AddPublicKeys, AddServices, RemovePublicKeys, RemoveServices,
 };
