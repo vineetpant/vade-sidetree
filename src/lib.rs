@@ -43,7 +43,3 @@ pub mod datatypes;
 mod in3_request_list;
 mod vade_sidetree;
 pub use self::vade_sidetree::*;
-pub use vade_sidetree_client::{
-    did::{JsonWebKey, JsonWebKeyPublic, PublicKey, Purpose, Service},
-    AddPublicKeys, AddServices, Patch, RemovePublicKeys, RemoveServices,
-};

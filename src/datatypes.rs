@@ -6,10 +6,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(feature = "sdk")]
 use std::os::raw::c_void;
+#[allow(unused_imports)]
 use vade_sidetree_client::{
-    did::{JsonWebKey, JsonWebKeyPublic},
-    Delta, Patch, SuffixData,
+    did::{JsonWebKey, JsonWebKeyPublic, PublicKey, Purpose, Service},
+    Delta, Patch, SuffixData, AddPublicKeys, AddServices, RemovePublicKeys, RemoveServices,
 };
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub enum UpdateType {
@@ -96,14 +98,14 @@ pub struct MethodMetadata {
     pub update_commitment: Option<String>,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Service {
-    pub id: String,
-    #[serde(rename = "type")]
-    pub type_field: String,
-    pub service_endpoint: String,
-}
+// #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct Service {
+//     pub id: String,
+//     #[serde(rename = "type")]
+//     pub type_field: String,
+//     pub service_endpoint: String,
+// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
