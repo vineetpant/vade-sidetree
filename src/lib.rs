@@ -43,3 +43,4 @@ mod vade_sidetree;
 #[cfg(feature = "sdk")]
 mod in3_request_list;
 pub use self::vade_sidetree::*;
+pub use vade_sidetree_client::*;
