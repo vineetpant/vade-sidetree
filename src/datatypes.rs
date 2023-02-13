@@ -9,7 +9,7 @@ use std::os::raw::c_void;
 
 pub use vade_sidetree_client::{
     did::{JsonWebKey, JsonWebKeyPublic, PublicKey, Purpose, Service},
-    Delta, Patch, SuffixData, AddPublicKeys, AddServices, RemovePublicKeys, RemoveServices,
+    AddPublicKeys, AddServices, Delta, Patch, RemovePublicKeys, RemoveServices, SuffixData,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -97,15 +97,6 @@ pub struct MethodMetadata {
     pub recovery_commitment: Option<String>,
     pub update_commitment: Option<String>,
 }
-
-// #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct Service {
-//     pub id: String,
-//     #[serde(rename = "type")]
-//     pub type_field: String,
-//     pub service_endpoint: String,
-// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
