@@ -37,7 +37,6 @@ export type Extensible = Record<string, any>;
  */
 export interface DidResolutionResult {
   '@context'?: 'https://w3id.org/did-resolution/v1' | string | string[];
-  didResolutionMetadata: DIDResolutionMetadata;
   didDocument: DidDocument | null;
   didDocumentMetadata: DidDocumentMetadata;
 }
