@@ -14,27 +14,40 @@
   limitations under the License.
 */
 
+export enum UpdateType {
+  Update = 'update',
+  Recovery = 'recovery',
+  Deactivate = 'deactivate',
+}
+
+export enum PublicKeyPurpose {
+  Authentication = 'authentication',
+  AssertionMethod = 'assertionMethod',
+  CapabilityInvocation = 'capabilityInvocation',
+  CapabilityDelegation = 'capabilityDelegation',
+  KeyAgreement = 'keyAgreement',
+}
+
 export type Extensible = Record<string, any>;
 
 /**
  * Defines the result of a DID resolution operation.
  *
- * @see {@link Resolvable.resolve}
- * @see {@link https://www.w3.org/TR/did-core/#did-resolution}
+ * @see https://www.w3.org/TR/did-core/#did-resolution
  */
-export interface DIDResolutionResult {
+export interface DidResolutionResult {
   '@context'?: 'https://w3id.org/did-resolution/v1' | string | string[];
   didResolutionMetadata: DIDResolutionMetadata;
-  didDocument: DIDDocument | null;
-  didDocumentMetadata: DIDDocumentMetadata;
+  didDocument: DidDocument | null;
+  didDocumentMetadata: DidDocumentMetadata;
 }
 
 /**
- * Represents metadata about the DID document resulting from a {@link Resolvable.resolve} operation.
+ * Represents metadata about the DID document resulting from a resolve operation.
  *
- * @see {@link https://www.w3.org/TR/did-core/#did-document-metadata}
+ * @see https://www.w3.org/TR/did-core/#did-document-metadata
  */
-export interface DIDDocumentMetadata extends Extensible {
+export interface DidDocumentMetadata extends Extensible {
   created?: string;
   updated?: string;
   deactivated?: boolean;
@@ -48,7 +61,7 @@ export interface DIDDocumentMetadata extends Extensible {
 /**
  * Represents the Verification Relationship between a DID subject and a Verification Method.
  *
- * @see {@link https://www.w3.org/TR/did-core/#verification-relationships}
+ * @see https://www.w3.org/TR/did-core/#verification-relationships
  */
 export type KeyCapabilitySection =
   | 'authentication'
@@ -60,9 +73,9 @@ export type KeyCapabilitySection =
 /**
  * Represents a DID document.
  *
- * @see {@link https://www.w3.org/TR/did-core/#did-document-properties}
+ * @see https://www.w3.org/TR/did-core/#did-document-properties
  */
-export type DIDDocument = {
+export type DidDocument = {
   '@context'?: 'https://www.w3.org/ns/did/v1' | string | string[];
   id: string;
   alsoKnownAs?: string[];
@@ -78,10 +91,10 @@ export type DIDDocument = {
 };
 
 /**
- * Represents a Service entry in a {@link https://www.w3.org/TR/did-core/#did-document-properties | DID document}.
+ * Represents a Service entry in a DID document.
  *
- * @see {@link https://www.w3.org/TR/did-core/#services}
- * @see {@link https://www.w3.org/TR/did-core/#service-properties}
+ * @see https://www.w3.org/TR/did-core/#services
+ * @see https://www.w3.org/TR/did-core/#service-properties
  */
 export interface Service {
   id: string;
@@ -95,8 +108,8 @@ export interface Service {
 /**
  * Represents an endpoint of a Service entry in a DID document.
  *
- * @see {@link https://www.w3.org/TR/did-core/#dfn-serviceendpoint}
- * @see {@link https://www.w3.org/TR/did-core/#services}
+ * @see https://www.w3.org/TR/did-core/#dfn-serviceendpoint
+ * @see https://www.w3.org/TR/did-core/#services
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ServiceEndpoint = string | Record<string, any>;
@@ -107,8 +120,8 @@ export type ServiceEndpoint = string | Record<string, any>;
  * This data type includes public key representations that are no longer present in the spec but are still used by
  * several DID methods / resolvers and kept for backward compatibility.
  *
- * @see {@link https://www.w3.org/TR/did-core/#verification-methods}
- * @see {@link https://www.w3.org/TR/did-core/#verification-method-properties}
+ * @see https://www.w3.org/TR/did-core/#verification-methods
+ * @see https://www.w3.org/TR/did-core/#verification-method-properties
  */
 export interface VerificationMethod {
   id: string;
@@ -131,7 +144,7 @@ export interface Params {
 }
 
 export interface DidCreateOptions {
-  type: string;
+  type: 'sidetree';
   waitForCompletion?: boolean;
 }
 
@@ -161,12 +174,12 @@ export interface DidDocumentMetadata {
 
 export interface SidetreeDidDocument {
   '@context': string;
-  didDocument: DIDDocument;
+  didDocument: DidDocument;
   didDocumentMetadata: DidDocumentMetadata;
 }
 
 export interface DidUpdateOptions {
-  type: string;
+  type: 'sidetree';
   waitForCompletion?: boolean;
 }
 export interface DidUpdatePayload {
