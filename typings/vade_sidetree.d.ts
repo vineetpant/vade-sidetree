@@ -212,13 +212,6 @@ export interface PublicKeyModel {
   controller?: string;
 }
 
-export enum PublicKeyPurpose {
-  Authentication = 'authentication',
-  AssertionMethod = 'assertionMethod',
-  CapabilityInvocation = 'capabilityInvocation',
-  CapabilityDelegation = 'capabilityDelegation',
-  KeyAgreement = 'keyAgreement',
-}
 
 export interface AddPublicKeysAction {
   action: 'add-public-keys';
