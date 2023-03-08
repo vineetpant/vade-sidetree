@@ -39,7 +39,7 @@
 //! [`VadePlugin`]: https://docs.rs/vade/*/vade/trait.VadePlugin.html
 
 pub mod datatypes;
-mod vade_sidetree;
 #[cfg(feature = "sdk")]
 mod in3_request_list;
+mod vade_sidetree;
 pub use self::vade_sidetree::*;

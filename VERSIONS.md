@@ -7,6 +7,7 @@
 - add support for passing keys to DID creation
 - add new flag `waitForCompletion` to the creation and update process
 - add typescript typings
+- export sidetree-client module
 
 ### Fixes
 
