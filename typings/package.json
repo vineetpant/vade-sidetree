@@ -1,0 +1,6 @@
+{
+  "name": "vade-sidetree-typings",
+  "version": "0.0.1",
+  "description": "typescript types for vade-sidetree",
+  "types": "./index.d.ts"
+}
