@@ -31,22 +31,6 @@ pub enum Operation {
 /// * `services`: An optional vector of `Service` instances to be included in the operation.
 /// * `update_key`: An optional `JsonWebKey` representing the update key to be used for the operation.
 /// * `recovery_key`: An optional `JsonWebKey` representing the recovery key to be used for the operation.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::OperationInput;
-/// use vade_sidetree::PublicKey;
-/// use vade_sidetree::Service;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let operation_input = OperationInput {
-///     public_keys: Some(vec![/* PublicKey instances */]),
-///     services: Some(vec![/* Service instances */]),
-///     update_key: Some(/* JsonWebKey instance */),
-///     recovery_key: Some(/* JsonWebKey instance */),
-/// };
-/// ```
 #[derive(Serialize, Debug, Clone, Default)]
 pub struct OperationInput {
     pub public_keys: Option<Vec<PublicKey>>,
@@ -91,21 +75,6 @@ impl OperationInput {
 /// * `patches`: A vector of `Patch` instances representing the changes to be applied to the DID document.
 /// * `update_key`: A `JsonWebKey` representing the update key to be used for the operation.
 /// * `update_commitment`: A `String` representing the update commitment value for the operation.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::UpdateOperationInput;
-/// use vade_sidetree::Patch;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let update_operation_input = UpdateOperationInput {
-///     did_suffix: "your_did_suffix".to_string(),
-///     patches: vec![/* Patch instances */],
-///     update_key: /* JsonWebKey instance */,
-///     update_commitment: "your_update_commitment".to_string(),
-/// };
-/// ```
 #[derive(Serialize, Debug, Clone, Default)]
 pub struct UpdateOperationInput {
     pub did_suffix: String,
@@ -151,22 +120,6 @@ impl UpdateOperationInput {
 /// * `recover_key`: A `JsonWebKey` representing the recovery key to be used for the operation.
 /// * `update_commitment`: A `String` representing the update commitment value for the operation.
 /// * `recovery_commitment`: A `String` representing the recovery commitment value for the operation.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::RecoverOperationInput;
-/// use vade_sidetree::Patch;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let recover_operation_input = RecoverOperationInput {
-///     did_suffix: "your_did_suffix".to_string(),
-///     patches: vec![/* Patch instances */],
-///     recover_key: /* JsonWebKey instance */,
-///     update_commitment: "your_update_commitment".to_string(),
-///     recovery_commitment: "your_recovery_commitment".to_string(),
-/// };
-/// ```
 #[derive(Serialize, Debug, Clone, Default)]
 pub struct RecoverOperationInput {
     pub did_suffix: String,
@@ -215,18 +168,6 @@ impl RecoverOperationInput {
 ///
 /// * `did_suffix`: A `String` representing the unique suffix of the DID to be deactivated.
 /// * `recover_key`: A `JsonWebKey` representing the recovery key to be used for the operation.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::DeactivateOperationInput;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let deactivate_operation_input = DeactivateOperationInput {
-///     did_suffix: "your_did_suffix".to_string(),
-///     recover_key: /* JsonWebKey instance */,
-/// };
-/// ```
 #[derive(Serialize, Debug, Clone, Default)]
 pub struct DeactivateOperationInput {
     pub did_suffix: String,
@@ -259,21 +200,6 @@ impl DeactivateOperationInput {
 /// * `did_suffix`: A `String` representing the unique suffix of the DID affected by the operation.
 /// * `update_key`: A `JsonWebKey` representing the update key for the DID document.
 /// * `recovery_key`: A `JsonWebKey` representing the recovery key for the DID document.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::OperationOutput;
-/// use vade_sidetree::Operation;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let operation_output = OperationOutput {
-///     operation_request: /* Operation instance */,
-///     did_suffix: "your_did_suffix".to_string(),
-///     update_key: /* JsonWebKey instance */,
-///     recovery_key: /* JsonWebKey instance */,
-/// };
-/// ```
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OperationOutput {
@@ -291,17 +217,6 @@ pub struct OperationOutput {
 /// # Fields
 ///
 /// * `operation_request`: An `Operation` representing the Sidetree update operation request.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::UpdateOperationOutput;
-/// use vade_sidetree::Operation;
-///
-/// let update_operation_output = UpdateOperationOutput {
-///     operation_request: /* Operation instance */,
-/// };
-/// ```
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateOperationOutput {
@@ -361,22 +276,6 @@ impl Serialize for Operation {
 ///
 /// A `Result<OperationOutput, Error>` containing an `OperationOutput` instance with
 /// the output of the create operation, or an `Error` if the operation fails.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::create;
-/// use vade_sidetree::OperationInput;
-///
-/// let operation_input = Some(OperationInput::new());
-/// let operation_output = create(operation_input).unwrap();
-/// ```
-///
-/// ```
-/// use vade_sidetree::create;
-///
-/// let operation_output = create(None).unwrap();
-/// ```
 pub fn create<'a>(config: Option<OperationInput>) -> Result<OperationOutput, Error<'a>> {
     create_config(config.unwrap_or_else(|| OperationInput::new()))
 }
@@ -393,16 +292,6 @@ pub fn create<'a>(config: Option<OperationInput>) -> Result<OperationOutput, Err
 ///
 /// A `Result<OperationOutput, Error>` containing an `OperationOutput` instance with
 /// the output of the create operation, or an `Error` if the operation fails.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::create_config;
-/// use vade_sidetree::OperationInput;
-///
-/// let operation_input = OperationInput::new();
-/// let operation_output = create_config(operation_input).unwrap();
-/// ```
 pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Error<'a>> {
     let document = Document {
         public_keys: config.public_keys,
@@ -459,16 +348,6 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
 ///
 /// A `Result<UpdateOperationOutput, Error>` containing an `UpdateOperationOutput` instance with
 /// the output of the update operation, or an `Error` if the operation fails.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::update;
-/// use vade_sidetree::UpdateOperationInput;
-///
-/// let update_operation_input = UpdateOperationInput::new();
-/// let update_operation_output = update(update_operation_input).unwrap();
-/// ```
 pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(config.update_key.x).unwrap();
     let mut public_key_y = decode(config.update_key.y.unwrap()).unwrap();
@@ -561,16 +440,6 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
 ///
 /// A `Result<UpdateOperationOutput, Error>` containing an `UpdateOperationOutput` instance with
 /// the output of the recover operation, or an `Error` if the operation fails.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::recover;
-/// use vade_sidetree::RecoverOperationInput;
-///
-/// let recover_operation_input = RecoverOperationInput::new();
-/// let recover_operation_output = recover(recover_operation_input).unwrap();
-/// ```
 pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutput, Error<'a>> {
     let mut public_key_x = decode(config.recover_key.x).unwrap();
     let mut public_key_y = decode(config.recover_key.y.unwrap()).unwrap();
@@ -663,16 +532,6 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
 ///
 /// A `Result<UpdateOperationOutput, Error>` containing an `UpdateOperationOutput` instance with
 /// the output of the deactivate operation, or an `Error` if the operation fails.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::deactivate;
-/// use vade_sidetree::DeactivateOperationInput;
-///
-/// let deactivate_operation_input = DeactivateOperationInput::new();
-/// let deactivate_operation_output = deactivate(deactivate_operation_input).unwrap();
-/// ```
 pub fn deactivate<'a>(
     config: DeactivateOperationInput,
 ) -> Result<UpdateOperationOutput, Error<'a>> {

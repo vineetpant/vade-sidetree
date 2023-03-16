@@ -16,23 +16,6 @@ use crate::encoder;
 ///
 /// * `value`: A reference to a value that implements `Serialize`. This is the value to be canonicalized.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::canonicalize;
-/// use serde_json::json;
-///
-/// let value = json!({
-///     "example": "value",
-///     "nested": {
-///         "a": 1,
-///         "b": 2
-///     }
-/// });
-///
-/// let canonicalized = canonicalize(&value).unwrap();
-/// ```
-///
 /// # Errors
 ///
 /// Returns an error as a `String` if the canonicalization process fails.
@@ -51,23 +34,6 @@ pub fn canonicalize<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>, String>
 ///
 /// * `value`: A reference to a value that implements `Serialize`. This is the value to be canonicalized, hashed, and encoded.
 /// * `algorithm`: The `HashAlgorithm` to be used for hashing the canonicalized JSON representation.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::{canonicalize_then_hash_then_encode, HashAlgorithm};
-/// use serde_json::json;
-///
-/// let value = json!({
-///     "example": "value",
-///     "nested": {
-///         "a": 1,
-///         "b": 2
-///     }
-/// });
-///
-/// let result = canonicalize_then_hash_then_encode(&value, HashAlgorithm::Sha256);
-/// ```
 ///
 /// # Errors
 ///
@@ -95,23 +61,6 @@ pub fn canonicalize_then_hash_then_encode<T: Serialize + ?Sized>(
 /// # Arguments
 ///
 /// * `value`: A reference to a value that implements `Serialize`. This is the value to be canonicalized, double-hashed, and encoded.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::canonicalize_then_double_hash_then_encode;
-/// use serde_json::json;
-///
-/// let value = json!({
-///     "example": "value",
-///     "nested": {
-///         "a": 1,
-///         "b": 2
-///     }
-/// });
-///
-/// let result = canonicalize_then_double_hash_then_encode(&value).unwrap();
-/// ```
 ///
 /// # Errors
 ///
@@ -141,16 +90,6 @@ pub fn canonicalize_then_double_hash_then_encode<T: Serialize + ?Sized>(
 /// * `buffer`: A byte slice representing the data to be hashed.
 /// * `algorithm`: The hash algorithm to be used for hashing the data. This should be a variant of the `HashAlgorithm` enum.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::hash;
-/// use vade_sidetree::HashAlgorithm;
-///
-/// let data = b"example data";
-/// let hashed_data = hash(data, HashAlgorithm::Sha256);
-/// ```
-///
 /// # Supported Hash Algorithms
 ///
 /// The following hash algorithms are currently supported:
@@ -174,16 +113,6 @@ pub fn hash(buffer: &[u8], algorithm: HashAlgorithm) -> Vec<u8> {
 /// * `buffer`: A byte slice representing the data to be hashed.
 /// * `algorithm`: The hash algorithm to be used for hashing the data. This should be a variant of the `HashAlgorithm` enum.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::hash_as_non_multihash_buffer;
-/// use vade_sidetree::HashAlgorithm;
-///
-/// let data = b"example data";
-/// let hashed_data = hash_as_non_multihash_buffer(data, HashAlgorithm::Sha256);
-/// ```
-///
 /// # Supported Hash Algorithms
 ///
 /// The following hash algorithms are currently supported:
@@ -206,16 +135,6 @@ pub fn hash_as_non_multihash_buffer(buffer: &[u8], algorithm: HashAlgorithm) -> 
 ///
 /// * `buffer`: A byte slice representing the data to be hashed.
 /// * `algorithm`: The hash algorithm to be used for hashing the data. This should be a variant of the `HashAlgorithm` enum.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::hash_then_encode;
-/// use vade_sidetree::HashAlgorithm;
-///
-/// let data = b"example data";
-/// let hashed_data = hash_then_encode(data, HashAlgorithm::Sha256);
-/// ```
 ///
 /// # Supported Hash Algorithms
 ///

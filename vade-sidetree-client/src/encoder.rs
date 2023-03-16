@@ -13,15 +13,6 @@ use base64::{decode_config, encode_config, DecodeError, URL_SAFE_NO_PAD};
 ///
 /// A `String` representing the URL-safe base64 encoding without padding of the input value.
 ///
-/// # Examples
-///
-/// ```
-/// use your_crate_name::{encode, decode};
-///
-/// let input = b"hello";
-/// let encoded = encode(input);
-/// assert_eq!(encoded, "aGVsbG8");
-/// ```
 pub fn encode<T: AsRef<[u8]>>(value: T) -> String {
     encode_config(value, URL_SAFE_NO_PAD)
 }
@@ -41,15 +32,6 @@ pub fn encode<T: AsRef<[u8]>>(value: T) -> String {
 /// A `Result<Vec<u8>, DecodeError>` where the `Ok` variant contains the decoded
 /// bytes as a `Vec<u8>`, and the `Err` variant contains a `DecodeError`.
 ///
-/// # Examples
-///
-/// ```
-/// use your_crate_name::{encode, decode};
-///
-/// let encoded = "aGVsbG8";
-/// let decoded = decode(encoded).unwrap();
-/// assert_eq!(decoded, b"hello");
-/// ```
 pub fn decode<T: AsRef<[u8]>>(value: T) -> Result<Vec<u8>, DecodeError> {
     decode_config(&value, URL_SAFE_NO_PAD)
 }

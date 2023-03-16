@@ -27,21 +27,6 @@ pub type ResolveHttpRequest = extern "C" fn(
 /// * `Result<String, Box<dyn Error>>`: A `Result` containing either the response body as a `String`
 ///   if the request was successful, or a boxed error if the request failed.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::send_request;
-/// use vade_sidetree::ResolveHttpRequest;
-/// use std::ffi::c_void;
-///
-/// let url = "https://example.com/api/endpoint".to_string();
-/// let method = "GET".to_string();
-/// let payload = None;
-/// let request_pointer: *const c_void = std::ptr::null();
-/// let resolve_http_request: ResolveHttpRequest = /* your FFI callback function */;
-///
-/// let result = send_request(url, method, payload, request_pointer, resolve_http_request);
-/// ```
 pub fn send_request(
     url: String,
     method: String,

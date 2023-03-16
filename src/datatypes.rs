@@ -20,20 +20,6 @@ pub enum UpdateType {
 /// This struct is used to store the data needed to create a Sidetree operation request, such as
 /// creating, updating, or recovering a DID.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::OperationRequestGenerated;
-/// use vade_sidetree::SuffixData;
-/// use vade_sidetree::Delta;
-///
-/// let operation_request = OperationRequestGenerated {
-///     r#type: "create".to_string(),
-///     suffix_data: SuffixData { /* your SuffixData struct fields */ },
-///     delta: Delta { /* your Delta struct fields */ },
-/// };
-/// ```
-///
 /// # Fields
 /// * `r#type`: The type of Sidetree operation, e.g., "create", "update", or "recover".
 /// * `suffix_data`: Contains the unique identifier data for the DID, such as the commitment and
@@ -51,21 +37,6 @@ pub struct OperationRequestGenerated {
 /// `DIDCreateResult` represents the result of a DID (Decentralized Identifier) creation
 /// operation in the Vade Sidetree system. This struct stores the data needed to manage the
 /// newly created DID, such as the operation request, DID suffix, and the update and recovery keys.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::DIDCreateResult;
-/// use vade_sidetree::OperationRequestGenerated;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let did_create_result = DIDCreateResult {
-///     operation_request: OperationRequestGenerated { /* your OperationRequestGenerated struct fields */ },
-///     did_suffix: "your_did_suffix".to_string(),
-///     update_key: JsonWebKey { /* your JsonWebKey struct fields */ },
-///     recovery_key: JsonWebKey { /* your JsonWebKey struct fields */ },
-/// };
-/// ```
 ///
 /// # Fields
 /// * `operation_request`: The generated `OperationRequestGenerated` containing the Sidetree
@@ -88,18 +59,6 @@ pub struct DIDCreateResult {
 /// This struct stores the data needed to verify the authenticity and integrity of the operation
 /// request, such as the update key and the delta hash.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::SignedDataPayload;
-/// use vade_sidetree::JsonWebKey;
-///
-/// let signed_data_payload = SignedDataPayload {
-///     update_key: JsonWebKey { /* your JsonWebKey struct fields */ },
-///     delta_hash: "your_delta_hash".to_string(),
-/// };
-/// ```
-///
 /// # Fields
 /// * `update_key`: A `JsonWebKey` representing the public/private key pair used for updating
 ///   the DID document. This key is included in the signed data payload to ensure that the
@@ -117,21 +76,6 @@ pub struct SignedDataPayload {
 /// `SideTreeConfig` represents the configuration for a Vade Sidetree system. This struct stores
 /// the data needed to configure and interact with the Sidetree REST API, as well as any SDK-related
 /// features.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::SideTreeConfig;
-/// use vade_sidetree::ResolveHttpRequest;
-///
-/// let sidetree_config = SideTreeConfig {
-///     #[cfg(feature = "sdk")]
-///     request_id: std::ptr::null(),
-///     #[cfg(feature = "sdk")]
-///     resolve_http_request: ResolveHttpRequest { /* your ResolveHttpRequest struct fields */ },
-///     sidetree_rest_api_url: "https://your-sidetree-api-url".to_string(),
-/// };
-/// ```
 ///
 /// # Fields
 /// * `request_id`: (SDK feature) A raw pointer to a C-style void type, representing the request
@@ -151,20 +95,6 @@ pub struct SideTreeConfig {
 /// `SidetreeDidDocument` represents a Sidetree DID Document along with its associated metadata.
 /// This struct stores the data needed to describe the structure and metadata of a Sidetree
 /// Decentralized Identifier (DID) Document.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::SidetreeDidDocument;
-/// use vade_sidetree::DidDocument;
-/// use vade_sidetree::DidDocumentMetadata;
-///
-/// let sidetree_did_document = SidetreeDidDocument {
-///     context: "https://www.w3.org/ns/did/v1".to_string(),
-///     did_document: DidDocument { /* your DidDocument struct fields */ },
-///     did_document_metadata: DidDocumentMetadata { /* your DidDocumentMetadata struct fields */ },
-/// };
-/// ```
 ///
 /// # Fields
 /// * `context`: A string representing the JSON-LD context for the DID Document, used to provide
@@ -187,24 +117,6 @@ pub struct SidetreeDidDocument {
 /// `DidDocument` represents the core content of a Decentralized Identifier (DID) Document.
 /// This struct stores the data needed to describe the structure of a DID Document, including
 /// identifiers, keys, service endpoints, and any extra fields.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::DidDocument;
-/// use vade_sidetree::KeyAgreement;
-/// use vade_sidetree::Service;
-/// use serde_json::Value;
-/// use std::collections::HashMap;
-///
-/// let did_document = DidDocument {
-///     id: "did:example:123".to_string(),
-///     context: Value::String("https://www.w3.org/ns/did/v1".to_string()),
-///     verification_method: Some(vec![KeyAgreement { /* your KeyAgreement struct fields */ }]),
-///     service: Some(vec![Service { /* your Service struct fields */ }]),
-///     extra: HashMap::new(),
-/// };
-/// ```
 ///
 /// # Fields
 /// * `id`: A string representing the unique identifier (DID) of the DID Document.
@@ -233,20 +145,6 @@ pub struct DidDocument {
 /// This struct stores the data needed to describe the structure of a key agreement method,
 /// including identifiers, controller, type, and the public key.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::KeyAgreement;
-/// use vade_sidetree::JsonWebKeyPublic;
-///
-/// let key_agreement = KeyAgreement {
-///     id: "did:example:123#key-1".to_string(),
-///     controller: "did:example:123".to_string(),
-///     type_field: "JsonWebKey2020".to_string(),
-///     public_key_jwk: JsonWebKeyPublic { /* your JsonWebKeyPublic struct fields */ },
-/// };
-/// ```
-///
 /// # Fields
 /// * `id`: A string representing the unique identifier of the key agreement entry within the DID Document.
 /// * `controller`: A string representing the DID that controls the key agreement entry.
@@ -266,18 +164,6 @@ pub struct KeyAgreement {
 /// Document. This struct stores the data needed to describe metadata such as method-specific
 /// information and the deactivated status of the DID.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::DidDocumentMetadata;
-/// use vade_sidetree::MethodMetadata;
-///
-/// let did_document_metadata = DidDocumentMetadata {
-///     method: MethodMetadata { /* your MethodMetadata struct fields */ },
-///     deactivated: Some(false),
-/// };
-/// ```
-///
 /// # Fields
 /// * `method`: A `MethodMetadata` struct that holds method-specific metadata for the DID Document.
 /// * `deactivated`: An optional boolean value indicating whether the DID has been deactivated.
@@ -292,18 +178,6 @@ pub struct DidDocumentMetadata {
 /// `MethodMetadata` represents the method-specific metadata associated with a Decentralized
 /// Identifier (DID) Document. This struct stores the data needed to describe metadata such as
 /// publication status, recovery commitment, and update commitment.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::MethodMetadata;
-///
-/// let method_metadata = MethodMetadata {
-///     published: true,
-///     recovery_commitment: Some("your_recovery_commitment".to_string()),
-///     update_commitment: Some("your_update_commitment".to_string()),
-/// };
-/// ```
 ///
 /// # Fields
 /// * `published`: A boolean value indicating whether the DID Document has been published to the
@@ -325,25 +199,6 @@ pub struct MethodMetadata {
 /// `DidUpdatePayload` represents the payload for a Decentralized Identifier (DID) update
 /// operation. This struct stores the data needed to describe the update operation, including the
 /// update type, keys, and patches.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::DidUpdatePayload;
-/// use vade_sidetree::UpdateType;
-/// use vade_sidetree::JsonWebKey;
-/// use vade_sidetree::JsonWebKeyPublic;
-/// use vade_sidetree::Patch;
-///
-/// let did_update_payload = DidUpdatePayload {
-///     update_type: UpdateType::SomeUpdateTypeVariant,
-///     update_key: Some(JsonWebKey { /* your JsonWebKey struct fields */ }),
-///     recovery_key: Some(JsonWebKey { /* your JsonWebKey struct fields */ }),
-///     next_update_key: Some(JsonWebKeyPublic { /* your JsonWebKeyPublic struct fields */ }),
-///     next_recovery_key: Some(JsonWebKeyPublic { /* your JsonWebKeyPublic struct fields */ }),
-///     patches: Some(vec![Patch { /* your Patch struct fields */ }]),
-/// };
-/// ```
 ///
 /// # Fields
 /// * `update_type`: An `UpdateType` enum variant representing the type of update operation to be
@@ -371,20 +226,6 @@ pub struct DidUpdatePayload {
 /// Identifier (DID) creation operation. This struct stores the data needed to describe the
 /// response, including the update and recovery keys, and the created DID Document.
 ///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::DidCreateResponse;
-/// use vade_sidetree::JsonWebKey;
-/// use vade_sidetree::SidetreeDidDocument;
-///
-/// let did_create_response = DidCreateResponse {
-///     update_key: JsonWebKey { /* your JsonWebKey struct fields */ },
-///     recovery_key: JsonWebKey { /* your JsonWebKey struct fields */ },
-///     did: SidetreeDidDocument { /* your SidetreeDidDocument struct fields */ },
-/// };
-/// ```
-///
 /// # Fields
 /// * `update_key`: A `JsonWebKey` struct representing the update key for the created DID.
 /// * `recovery_key`: A `JsonWebKey` struct representing the recovery key for the created DID.
@@ -399,16 +240,6 @@ pub struct DidCreateResponse {
 
 /// `TypeOptions` represents a message passed to vade containing the desired DID implementation.
 /// The action will not be performed if the `type` field does not indicate a valid DID type.
-///
-/// # Examples
-///
-/// ```
-/// use vade_sidetree::TypeOptions;
-///
-/// let type_options = TypeOptions {
-///     r#type: Some("your_did_type".to_string()),
-/// };
-/// ```
 ///
 /// # Fields
 /// * `r#type`: An optional string representing the desired DID type for the operation. If it does
