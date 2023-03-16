@@ -12,6 +12,36 @@ pub type ResolveHttpRequest = extern "C" fn(
     res: *mut *mut c_char,
 ) -> i32;
 
+/// Sends an HTTP request using the provided parameters
+///
+/// # Arguments
+///
+/// * `url`: A string representing the target URL for the HTTP request.
+/// * `method`: A string representing the HTTP method to be used (e.g., "GET", "POST").
+/// * `payload`: An optional string representing the request payload, if applicable.
+/// * `request_pointer`: A raw pointer to a `c_void` representing the request context.
+/// * `resolve_http_request`: A `ResolveHttpRequest` callback function to handle the actual HTTP request.
+///
+/// # Returns
+///
+/// * `Result<String, Box<dyn Error>>`: A `Result` containing either the response body as a `String`
+///   if the request was successful, or a boxed error if the request failed.
+///
+/// # Examples
+///
+/// ```
+/// use vade-sidetree::send_request;
+/// use vade-sidetree::ResolveHttpRequest;
+/// use std::ffi::c_void;
+///
+/// let url = "https://example.com/api/endpoint".to_string();
+/// let method = "GET".to_string();
+/// let payload = None;
+/// let request_pointer: *const c_void = std::ptr::null();
+/// let resolve_http_request: ResolveHttpRequest = /* your FFI callback function */;
+///
+/// let result = send_request(url, method, payload, request_pointer, resolve_http_request);
+/// ```
 pub fn send_request(
     url: String,
     method: String,
