@@ -30,8 +30,8 @@ pub type ResolveHttpRequest = extern "C" fn(
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::send_request;
-/// use vade-sidetree::ResolveHttpRequest;
+/// use vade_sidetree::send_request;
+/// use vade_sidetree::ResolveHttpRequest;
 /// use std::ffi::c_void;
 ///
 /// let url = "https://example.com/api/endpoint".to_string();

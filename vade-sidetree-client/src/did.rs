@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::Document;
-/// use vade-sidetree::PublicKey;
-/// use vade-sidetree::Service;
+/// use vade_sidetree::Document;
+/// use vade_sidetree::PublicKey;
+/// use vade_sidetree::Service;
 ///
 /// let document = Document {
 ///     public_keys: Some(vec![PublicKey { /* your PublicKey struct fields */ }]),
@@ -43,9 +43,9 @@ pub struct Document {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::PublicKey;
-/// use vade-sidetree::Purpose;
-/// use vade-sidetree::JsonWebKey;
+/// use vade_sidetree::PublicKey;
+/// use vade_sidetree::Purpose;
+/// use vade_sidetree::JsonWebKey;
 ///
 /// let public_key = PublicKey {
 ///     id: "public-key-1".to_string(),
@@ -86,7 +86,7 @@ pub struct PublicKey {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::JsonWebKeyPublic;
+/// use vade_sidetree::JsonWebKeyPublic;
 ///
 /// let public_key = JsonWebKeyPublic {
 ///     key_type: "EC".to_string(),
@@ -126,7 +126,7 @@ pub struct JsonWebKeyPublic {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::JsonWebKey;
+/// use vade_sidetree::JsonWebKey;
 ///
 /// let jwk = JsonWebKey {
 ///     key_type: "EC".to_string(),
@@ -171,7 +171,7 @@ pub struct JsonWebKey {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::Service;
+/// use vade_sidetree::Service;
 ///
 /// let service = Service {
 ///     id: "service-1".to_string(),

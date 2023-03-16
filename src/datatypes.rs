@@ -23,9 +23,9 @@ pub enum UpdateType {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::OperationRequestGenerated;
-/// use vade-sidetree::SuffixData;
-/// use vade-sidetree::Delta;
+/// use vade_sidetree::OperationRequestGenerated;
+/// use vade_sidetree::SuffixData;
+/// use vade_sidetree::Delta;
 ///
 /// let operation_request = OperationRequestGenerated {
 ///     r#type: "create".to_string(),
@@ -55,9 +55,9 @@ pub struct OperationRequestGenerated {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::DIDCreateResult;
-/// use vade-sidetree::OperationRequestGenerated;
-/// use vade-sidetree::JsonWebKey;
+/// use vade_sidetree::DIDCreateResult;
+/// use vade_sidetree::OperationRequestGenerated;
+/// use vade_sidetree::JsonWebKey;
 ///
 /// let did_create_result = DIDCreateResult {
 ///     operation_request: OperationRequestGenerated { /* your OperationRequestGenerated struct fields */ },
@@ -91,8 +91,8 @@ pub struct DIDCreateResult {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::SignedDataPayload;
-/// use vade-sidetree::JsonWebKey;
+/// use vade_sidetree::SignedDataPayload;
+/// use vade_sidetree::JsonWebKey;
 ///
 /// let signed_data_payload = SignedDataPayload {
 ///     update_key: JsonWebKey { /* your JsonWebKey struct fields */ },
@@ -121,8 +121,8 @@ pub struct SignedDataPayload {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::SideTreeConfig;
-/// use vade-sidetree::ResolveHttpRequest;
+/// use vade_sidetree::SideTreeConfig;
+/// use vade_sidetree::ResolveHttpRequest;
 ///
 /// let sidetree_config = SideTreeConfig {
 ///     #[cfg(feature = "sdk")]
@@ -155,9 +155,9 @@ pub struct SideTreeConfig {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::SidetreeDidDocument;
-/// use vade-sidetree::DidDocument;
-/// use vade-sidetree::DidDocumentMetadata;
+/// use vade_sidetree::SidetreeDidDocument;
+/// use vade_sidetree::DidDocument;
+/// use vade_sidetree::DidDocumentMetadata;
 ///
 /// let sidetree_did_document = SidetreeDidDocument {
 ///     context: "https://www.w3.org/ns/did/v1".to_string(),
@@ -169,7 +169,7 @@ pub struct SideTreeConfig {
 /// # Fields
 /// * `context`: A string representing the JSON-LD context for the DID Document, used to provide
 ///   a semantic meaning to the document structure. Typically, this is set to
-///   "https://www.w3.org/ns/did/v1".
+///   `<https://www.w3.org/ns/did/v1>`.
 /// * `did_document`: A `DidDocument` struct that holds the actual content of the DID Document,
 ///   including identifiers, keys, and service endpoints.
 /// * `did_document_metadata`: A `DidDocumentMetadata` struct that contains metadata related to
@@ -191,9 +191,9 @@ pub struct SidetreeDidDocument {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::DidDocument;
-/// use vade-sidetree::KeyAgreement;
-/// use vade-sidetree::Service;
+/// use vade_sidetree::DidDocument;
+/// use vade_sidetree::KeyAgreement;
+/// use vade_sidetree::Service;
 /// use serde_json::Value;
 /// use std::collections::HashMap;
 ///
@@ -210,7 +210,7 @@ pub struct SidetreeDidDocument {
 /// * `id`: A string representing the unique identifier (DID) of the DID Document.
 /// * `context`: A JSON-LD `Value` representing the context for the DID Document, used to provide
 ///   a semantic meaning to the document structure. Typically, this is set to
-///   "https://www.w3.org/ns/did/v1".
+///   `<https://www.w3.org/ns/did/v1>`.
 /// * `verification_method`: An optional vector of `KeyAgreement` structs, representing the
 ///   verification methods (e.g., public keys) associated with the DID.
 /// * `service`: An optional vector of `Service` structs, representing the service endpoints
@@ -236,8 +236,8 @@ pub struct DidDocument {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::KeyAgreement;
-/// use vade-sidetree::JsonWebKeyPublic;
+/// use vade_sidetree::KeyAgreement;
+/// use vade_sidetree::JsonWebKeyPublic;
 ///
 /// let key_agreement = KeyAgreement {
 ///     id: "did:example:123#key-1".to_string(),
@@ -269,8 +269,8 @@ pub struct KeyAgreement {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::DidDocumentMetadata;
-/// use vade-sidetree::MethodMetadata;
+/// use vade_sidetree::DidDocumentMetadata;
+/// use vade_sidetree::MethodMetadata;
 ///
 /// let did_document_metadata = DidDocumentMetadata {
 ///     method: MethodMetadata { /* your MethodMetadata struct fields */ },
@@ -296,7 +296,7 @@ pub struct DidDocumentMetadata {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::MethodMetadata;
+/// use vade_sidetree::MethodMetadata;
 ///
 /// let method_metadata = MethodMetadata {
 ///     published: true,
@@ -329,11 +329,11 @@ pub struct MethodMetadata {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::DidUpdatePayload;
-/// use vade-sidetree::UpdateType;
-/// use vade-sidetree::JsonWebKey;
-/// use vade-sidetree::JsonWebKeyPublic;
-/// use vade-sidetree::Patch;
+/// use vade_sidetree::DidUpdatePayload;
+/// use vade_sidetree::UpdateType;
+/// use vade_sidetree::JsonWebKey;
+/// use vade_sidetree::JsonWebKeyPublic;
+/// use vade_sidetree::Patch;
 ///
 /// let did_update_payload = DidUpdatePayload {
 ///     update_type: UpdateType::SomeUpdateTypeVariant,
@@ -374,9 +374,9 @@ pub struct DidUpdatePayload {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::DidCreateResponse;
-/// use vade-sidetree::JsonWebKey;
-/// use vade-sidetree::SidetreeDidDocument;
+/// use vade_sidetree::DidCreateResponse;
+/// use vade_sidetree::JsonWebKey;
+/// use vade_sidetree::SidetreeDidDocument;
 ///
 /// let did_create_response = DidCreateResponse {
 ///     update_key: JsonWebKey { /* your JsonWebKey struct fields */ },
@@ -403,7 +403,7 @@ pub struct DidCreateResponse {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::TypeOptions;
+/// use vade_sidetree::TypeOptions;
 ///
 /// let type_options = TypeOptions {
 ///     r#type: Some("your_did_type".to_string()),

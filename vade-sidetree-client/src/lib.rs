@@ -10,7 +10,7 @@ use std::fmt;
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{Delta, Patch};
+/// use vade_sidetree::{Delta, Patch};
 ///
 /// let patch = Patch::default(); // Replace with an actual patch
 /// let delta = Delta {
@@ -38,7 +38,7 @@ pub struct Delta {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::SuffixData;
+/// use vade_sidetree::SuffixData;
 ///
 /// let suffix_data = SuffixData {
 ///     delta_hash: "hash-value".to_string(),
@@ -65,7 +65,7 @@ pub struct SuffixData {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{SignedUpdateDataPayload, JsonWebKey};
+/// use vade_sidetree::{SignedUpdateDataPayload, JsonWebKey};
 ///
 /// let update_key = JsonWebKey::default(); // Replace with an actual key
 /// let signed_update_data_payload = SignedUpdateDataPayload {
@@ -93,7 +93,7 @@ pub struct SignedUpdateDataPayload {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{SignedRecoveryDataPayload, JsonWebKeyPublic};
+/// use vade_sidetree::{SignedRecoveryDataPayload, JsonWebKeyPublic};
 ///
 /// let recovery_key = JsonWebKeyPublic::default(); // Replace with an actual key
 /// let signed_recovery_data_payload = SignedRecoveryDataPayload {
@@ -124,7 +124,7 @@ pub struct SignedRecoveryDataPayload {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{SignedDeactivateDataPayload, JsonWebKeyPublic};
+/// use vade_sidetree::{SignedDeactivateDataPayload, JsonWebKeyPublic};
 ///
 /// let recovery_key = JsonWebKeyPublic::default(); // Replace with an actual key
 /// let signed_deactivate_data_payload = SignedDeactivateDataPayload {
@@ -152,7 +152,7 @@ pub struct SignedDeactivateDataPayload {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::RemovePublicKeys;
+/// use vade_sidetree::RemovePublicKeys;
 ///
 /// let remove_public_keys = RemovePublicKeys {
 ///     ids: vec!["key-id-1".to_string(), "key-id-2".to_string()],
@@ -175,7 +175,7 @@ pub struct RemovePublicKeys {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{AddPublicKeys, PublicKey};
+/// use vade_sidetree::{AddPublicKeys, PublicKey};
 ///
 /// let public_key1 = PublicKey::default(); // Replace with an actual key
 /// let public_key2 = PublicKey::default(); // Replace with an actual key
@@ -201,7 +201,7 @@ pub struct AddPublicKeys {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::RemoveServices;
+/// use vade_sidetree::RemoveServices;
 ///
 /// let remove_services = RemoveServices {
 ///     ids: vec!["service-id-1".to_string(), "service-id-2".to_string()],
@@ -224,7 +224,7 @@ pub struct RemoveServices {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{AddServices, Service};
+/// use vade_sidetree::{AddServices, Service};
 ///
 /// let service1 = Service::default(); // Replace with an actual service
 /// let service2 = Service::default(); // Replace with an actual service
@@ -250,7 +250,7 @@ pub struct AddServices {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{ReplaceDocument, Document};
+/// use vade_sidetree::{ReplaceDocument, Document};
 ///
 /// let document = Document::default(); // Replace with an actual document
 /// let replace_document = ReplaceDocument {
@@ -274,7 +274,7 @@ pub struct ReplaceDocument {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{JsonPatch, IetfJsonPatch};
+/// use vade_sidetree::{JsonPatch, IetfJsonPatch};
 ///
 /// let patch1 = IetfJsonPatch::default(); // Replace with an actual patch
 /// let patch2 = IetfJsonPatch::default(); // Replace with an actual patch
@@ -299,7 +299,7 @@ pub struct JsonPatch {
 /// # Examples
 ///
 /// ```
-/// use vade-sidetree::{IetfJsonPatch, Value};
+/// use vade_sidetree::{IetfJsonPatch, Value};
 ///
 /// let json_patch = IetfJsonPatch {
 ///     op: "replace".to_string(),
