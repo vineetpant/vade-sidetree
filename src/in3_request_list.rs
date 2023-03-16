@@ -26,7 +26,6 @@ pub type ResolveHttpRequest = extern "C" fn(
 ///
 /// * `Result<String, Box<dyn Error>>`: A `Result` containing either the response body as a `String`
 ///   if the request was successful, or a boxed error if the request failed.
-///
 pub fn send_request(
     url: String,
     method: String,

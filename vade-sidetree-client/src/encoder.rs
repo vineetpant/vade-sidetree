@@ -12,7 +12,6 @@ use base64::{decode_config, encode_config, DecodeError, URL_SAFE_NO_PAD};
 /// # Returns
 ///
 /// A `String` representing the URL-safe base64 encoding without padding of the input value.
-///
 pub fn encode<T: AsRef<[u8]>>(value: T) -> String {
     encode_config(value, URL_SAFE_NO_PAD)
 }
@@ -31,7 +30,6 @@ pub fn encode<T: AsRef<[u8]>>(value: T) -> String {
 ///
 /// A `Result<Vec<u8>, DecodeError>` where the `Ok` variant contains the decoded
 /// bytes as a `Vec<u8>`, and the `Err` variant contains a `DecodeError`.
-///
 pub fn decode<T: AsRef<[u8]>>(value: T) -> Result<Vec<u8>, DecodeError> {
     decode_config(&value, URL_SAFE_NO_PAD)
 }
