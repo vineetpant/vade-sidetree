@@ -5,6 +5,15 @@ use super::{
     encoder::encode,
 };
 
+/// Represents a cryptographic key pair consisting of a public key and an optional secret key.
+///
+/// This struct is used in various operations such as create, update, recover, and deactivate
+/// for signing and verification purposes.
+///
+/// # Fields
+///
+/// * `public_key` - A `PublicKey` representing the public key component of the key pair.
+/// * `secret_key` - An `Option<SecretKey>` representing the secret key component of the key pair, if available.
 #[derive(Debug, Clone)]
 pub struct KeyPair {
     pub public_key: PublicKey,

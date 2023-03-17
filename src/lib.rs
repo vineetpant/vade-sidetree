@@ -35,7 +35,7 @@
 //! [`did_create`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.VadeEvanSubstrate.html#method.did_create
 //! [`did_resolve`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.VadeEvanSubstrate.html#method.did_resolve
 //! [`did_update`]: https://docs.rs/vade_evan_substrate/*/vade_evan_substrate/vade_evan_substrate/struct.VadeEvanSubstrate.html#method.did_update
-//! [`VadeSidetree `]: https://git.slock.it/equs/interop/vade/vade-sidetree
+//! [`VadeSidetree `]: https://git.slock.it/equs/interop/vade/vade_sidetree
 //! [`VadePlugin`]: https://docs.rs/vade/*/vade/trait.VadePlugin.html
 
 pub mod datatypes;
