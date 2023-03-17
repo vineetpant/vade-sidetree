@@ -30,7 +30,7 @@ use std::error::Error;
 #[cfg(feature = "sdk")]
 use std::os::raw::c_void;
 use vade::{VadePlugin, VadePluginResultValue};
-use vade_sidetree_client::{
+use crate::vade_sidetree_client::{
     did::{JsonWebKey, PublicKey, Service},
     multihash,
     operations::{self, DeactivateOperationInput, OperationInput},
@@ -418,7 +418,7 @@ mod tests {
     use super::*;
     use serial_test::serial;
     use std::sync::Once;
-    use vade_sidetree_client::{
+    use crate::vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
         secp256k1, Patch,
     };
@@ -655,7 +655,7 @@ mod tests {
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::KeyAgreement].to_vec()));
 
-        let patch: Patch = Patch::AddPublicKeys(vade_sidetree_client::AddPublicKeys {
+        let patch: Patch = Patch::AddPublicKeys(crate::vade_sidetree_client::AddPublicKeys {
             public_keys: vec![update_key.clone()],
         });
 
@@ -704,7 +704,7 @@ mod tests {
         let update_key =
             key_pair.to_public_key("update_key".into(), Some([Purpose::KeyAgreement].to_vec()));
 
-        let patch: Patch = Patch::AddPublicKeys(vade_sidetree_client::AddPublicKeys {
+        let patch: Patch = Patch::AddPublicKeys(crate::vade_sidetree_client::AddPublicKeys {
             public_keys: vec![update_key.clone()],
         });
 
@@ -739,7 +739,7 @@ mod tests {
         // then remove the public key from the DID again
         let new_key_pair = secp256k1::KeyPair::random();
 
-        let patch: Patch = Patch::RemovePublicKeys(vade_sidetree_client::RemovePublicKeys {
+        let patch: Patch = Patch::RemovePublicKeys(crate::vade_sidetree_client::RemovePublicKeys {
             ids: vec!["update_key".to_string()],
         });
 
@@ -782,7 +782,7 @@ mod tests {
             service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServices(crate::vade_sidetree_client::AddServices {
             services: vec![service],
         });
 
@@ -831,7 +831,7 @@ mod tests {
             service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServices(crate::vade_sidetree_client::AddServices {
             services: vec![service],
         });
 
@@ -859,7 +859,7 @@ mod tests {
         assert_eq!(did_document_services.len(), 1);
         assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
 
-        let patch: Patch = Patch::RemoveServices(vade_sidetree_client::RemoveServices {
+        let patch: Patch = Patch::RemoveServices(crate::vade_sidetree_client::RemoveServices {
             ids: vec!["sds".to_string()],
         });
 
@@ -901,7 +901,7 @@ mod tests {
             service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServices(crate::vade_sidetree_client::AddServices {
             services: vec![service],
         });
 
@@ -930,7 +930,7 @@ mod tests {
         assert_eq!(did_document_services.len(), 1);
         assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
 
-        let patch: Patch = Patch::RemoveServices(vade_sidetree_client::RemoveServices {
+        let patch: Patch = Patch::RemoveServices(crate::vade_sidetree_client::RemoveServices {
             ids: vec!["sds".to_string()],
         });
 
@@ -973,7 +973,7 @@ mod tests {
             service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServices(crate::vade_sidetree_client::AddServices {
             services: vec![service],
         });
 
@@ -1002,7 +1002,7 @@ mod tests {
         assert_eq!(did_document_services.len(), 1);
         assert_eq!(did_document_services[0].service_endpoint, service_endpoint);
 
-        let patch: Patch = Patch::RemoveServices(vade_sidetree_client::RemoveServices {
+        let patch: Patch = Patch::RemoveServices(crate::vade_sidetree_client::RemoveServices {
             ids: vec!["sds".to_string()],
         });
 
@@ -1032,7 +1032,7 @@ mod tests {
             service_endpoint: service_endpoint.clone(),
         };
 
-        let patch: Patch = Patch::AddServices(vade_sidetree_client::AddServices {
+        let patch: Patch = Patch::AddServices(crate::vade_sidetree_client::AddServices {
             services: vec![service],
         });
 
@@ -1078,7 +1078,7 @@ mod tests {
         let update1_key_pair = secp256k1::KeyPair::random();
         let recover1_key_pair = secp256k1::KeyPair::random();
 
-        let patch: Patch = Patch::Replace(vade_sidetree_client::ReplaceDocument {
+        let patch: Patch = Patch::Replace(crate::vade_sidetree_client::ReplaceDocument {
             document: Document {
                 public_keys: Some(vec![update1_key_pair
                     .to_public_key("doc_key".into(), Some([Purpose::KeyAgreement].to_vec()))]),
@@ -1130,7 +1130,7 @@ mod tests {
         let mut recover1_key_pair = create_response.recovery_key.clone();
         recover1_key_pair.nonce = Some('1'.to_string());
 
-        let patch: Patch = Patch::Replace(vade_sidetree_client::ReplaceDocument {
+        let patch: Patch = Patch::Replace(crate::vade_sidetree_client::ReplaceDocument {
             document: Document {
                 public_keys: None,
                 services: None,
@@ -1178,7 +1178,7 @@ mod tests {
         let mut recover1_key_pair = create_response.recovery_key.clone();
         recover1_key_pair.nonce = Some('2'.to_string());
 
-        let patch: Patch = Patch::Replace(vade_sidetree_client::ReplaceDocument {
+        let patch: Patch = Patch::Replace(crate::vade_sidetree_client::ReplaceDocument {
             document: Document {
                 public_keys: None,
                 services: None,

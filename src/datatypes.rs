@@ -7,7 +7,7 @@ use serde_json::Value;
 #[cfg(feature = "sdk")]
 use std::os::raw::c_void;
 
-pub use vade_sidetree_client::{did::*, *};
+pub use crate::vade_sidetree_client::{did::*, *};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]

@@ -4,7 +4,7 @@ use ::multihash::{Code, MultihashDigest};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-use crate::encoder;
+use super::encoder;
 
 pub fn canonicalize<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>, String> {
     serde_jcs::to_vec(value).map_err(|err| format!("{}", err))
