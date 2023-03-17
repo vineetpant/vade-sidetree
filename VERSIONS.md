@@ -8,6 +8,7 @@
 - add new flag `waitForCompletion` to the creation and update process
 - add typescript typings
 - export sidetree-client module
+- refactor code to make sidetree-client an internal module
 
 ### Fixes
 
