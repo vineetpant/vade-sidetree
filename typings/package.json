@@ -1,5 +1,9 @@
 {
-  "name": "vade-sidetree-typings",
+  "name": "@evan.network/vade-sidetree-typings",
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Blockchains Inc",
   "version": "0.0.1",
   "description": "typescript types for vade-sidetree",
   "types": "./index.d.ts"
