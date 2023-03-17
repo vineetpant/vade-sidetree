@@ -12,6 +12,20 @@ pub type ResolveHttpRequest = extern "C" fn(
     res: *mut *mut c_char,
 ) -> i32;
 
+/// Sends an HTTP request using the provided parameters
+///
+/// # Arguments
+///
+/// * `url`: A string representing the target URL for the HTTP request.
+/// * `method`: A string representing the HTTP method to be used (e.g., "GET", "POST").
+/// * `payload`: An optional string representing the request payload, if applicable.
+/// * `request_pointer`: A raw pointer to a `c_void` representing the request context.
+/// * `resolve_http_request`: A `ResolveHttpRequest` callback function to handle the actual HTTP request.
+///
+/// # Returns
+///
+/// * `Result<String, Box<dyn Error>>`: A `Result` containing either the response body as a `String`
+///   if the request was successful, or a boxed error if the request failed.
 pub fn send_request(
     url: String,
     method: String,
