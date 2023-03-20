@@ -227,7 +227,6 @@ impl VadePlugin for VadeSidetree {
             let mut update_found = false;
             let mut timeout_counter = 0;
             while !update_found {
-                dbg!(&response.did.did_document.id);
                 let res = self
                     .resolve_sidetree_did(
                         self.config.sidetree_rest_api_url.clone(),
