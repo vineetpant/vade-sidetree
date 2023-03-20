@@ -1,10 +1,10 @@
-use crate::encoder::decode;
-use crate::multihash::canonicalize_then_double_hash_then_encode;
-use crate::{
+use super::encoder::decode;
+use super::multihash::canonicalize_then_double_hash_then_encode;
+use super::{
     did::*, multihash::canonicalize_then_hash_then_encode, secp256k1::KeyPair, Delta, Patch,
     SuffixData,
 };
-use crate::{
+use super::{
     Error, ReplaceDocument, SignedDeactivateDataPayload, SignedRecoveryDataPayload,
     SignedUpdateDataPayload,
 };
@@ -311,7 +311,7 @@ pub fn create_config<'a>(config: OperationInput) -> Result<OperationOutput, Erro
     };
 
     let delta_hash =
-        canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
+        canonicalize_then_hash_then_encode(&delta, super::multihash::HashAlgorithm::Sha256);
 
     let recovery_key = config
         .recovery_key
@@ -381,7 +381,7 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
     };
 
     let delta_hash =
-        canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
+        canonicalize_then_hash_then_encode(&delta, super::multihash::HashAlgorithm::Sha256);
 
     let signed_data_payload = SignedUpdateDataPayload {
         update_key: update_key_public.clone(),
@@ -418,7 +418,7 @@ pub fn update<'a>(config: UpdateOperationInput) -> Result<UpdateOperationOutput,
 
     let reveal_value = canonicalize_then_hash_then_encode(
         &update_key_public.clone(),
-        crate::multihash::HashAlgorithm::Sha256,
+        super::multihash::HashAlgorithm::Sha256,
     );
 
     let operation = Operation::Update(config.did_suffix, delta, message, reveal_value);
@@ -472,7 +472,7 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
     };
 
     let delta_hash =
-        canonicalize_then_hash_then_encode(&delta, crate::multihash::HashAlgorithm::Sha256);
+        canonicalize_then_hash_then_encode(&delta, super::multihash::HashAlgorithm::Sha256);
 
     let signed_data_payload = SignedRecoveryDataPayload {
         delta_hash,
@@ -510,7 +510,7 @@ pub fn recover<'a>(config: RecoverOperationInput) -> Result<UpdateOperationOutpu
 
     let reveal_value = canonicalize_then_hash_then_encode(
         &recovery_key_public.clone(),
-        crate::multihash::HashAlgorithm::Sha256,
+        super::multihash::HashAlgorithm::Sha256,
     );
 
     let operation = Operation::Recover(config.did_suffix, delta, message, reveal_value);
@@ -594,7 +594,7 @@ pub fn deactivate<'a>(
 
     let reveal_value = canonicalize_then_hash_then_encode(
         &recovery_key_public.clone(),
-        crate::multihash::HashAlgorithm::Sha256,
+        super::multihash::HashAlgorithm::Sha256,
     );
     let operation = Operation::Deactivate(config.did_suffix, message, reveal_value);
 
@@ -605,7 +605,7 @@ pub fn deactivate<'a>(
 
 #[cfg(test)]
 mod test {
-    use crate::did::{JsonWebKey, PublicKey, Purpose};
+    use crate::vade_sidetree_client::did::{JsonWebKey, PublicKey, Purpose};
 
     use super::{create, create_config, Operation, OperationInput};
 

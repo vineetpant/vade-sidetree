@@ -1,4 +1,4 @@
-use crate::{
+use super::{
     encoder::encode,
     multihash::{canonicalize, hash, HashAlgorithm},
     SuffixData,

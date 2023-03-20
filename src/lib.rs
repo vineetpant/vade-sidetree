@@ -42,4 +42,5 @@ pub mod datatypes;
 #[cfg(feature = "sdk")]
 mod in3_request_list;
 mod vade_sidetree;
+mod vade_sidetree_client;
 pub use self::vade_sidetree::*;

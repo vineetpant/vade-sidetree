@@ -1,6 +1,6 @@
 use libsecp256k1::{Message, PublicKey, RecoveryId, SecretKey, Signature};
 
-use crate::{
+use super::{
     did::{JsonWebKey, JsonWebKeyPublic, Purpose},
     encoder::encode,
 };
@@ -36,11 +36,11 @@ impl KeyPair {
         )
     }
 
-    pub fn to_public_key(&self, id: String, purposes: Option<Vec<Purpose>>) -> crate::PublicKey {
+    pub fn to_public_key(&self, id: String, purposes: Option<Vec<Purpose>>) -> super::PublicKey {
         let mut jwk: JsonWebKey = self.into();
         jwk.d = None;
 
-        crate::PublicKey {
+        super::PublicKey {
             id,
             controller: None,
             key_type: "EcdsaSecp256k1VerificationKey2019".to_string(),

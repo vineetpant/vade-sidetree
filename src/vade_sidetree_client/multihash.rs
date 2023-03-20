@@ -4,7 +4,7 @@ use ::multihash::{Code, MultihashDigest};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-use crate::encoder;
+use super::encoder;
 
 /// Canonicalizes a serializable value using JCS (JSON Canonicalization Scheme).
 ///

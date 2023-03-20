@@ -1,3 +1,9 @@
+pub mod did;
+mod encoder;
+pub mod multihash;
+pub mod operations;
+pub mod secp256k1;
+
 use did::{Document, JsonWebKey, JsonWebKeyPublic, PublicKey, Service};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -204,8 +210,4 @@ impl fmt::Display for Error<'_> {
         write!(f, "{:?}", self)
     }
 }
-pub mod did;
-mod encoder;
-pub mod multihash;
-pub mod operations;
-pub mod secp256k1;
+
