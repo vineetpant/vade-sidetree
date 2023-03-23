@@ -489,7 +489,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_create_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
@@ -508,7 +508,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_create_did_with_predefined_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
@@ -560,7 +560,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_resolve_did() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -578,7 +578,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_create_did_with_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -621,7 +621,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_create_did_with_services() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -643,7 +643,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_add_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -692,7 +692,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_remove_public_keys() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -767,7 +767,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_add_service_endpoints() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -816,7 +816,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_remove_services() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -887,7 +887,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_remove_services_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -958,7 +958,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_three_times_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -1066,7 +1066,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_recover() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -1116,7 +1116,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_recover_with_nonce() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
@@ -1163,7 +1163,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_deactivate_did_after_recover_with_nonce() -> Result<(), Box<dyn std::error::Error>>
     {
         enable_logging();
@@ -1239,7 +1239,7 @@ mod tests {
 
     #[tokio::main]
     #[test]
-    #[serial]
+
     async fn can_update_did_deactivate() -> Result<(), Box<dyn std::error::Error>> {
         enable_logging();
 
