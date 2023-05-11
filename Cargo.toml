@@ -1,6 +1,6 @@
 [package]
 name = "vade-sidetree"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["evan GmbH", "Blockchains Inc."]
 edition = "2018"
 license-file = "LICENSE.txt"

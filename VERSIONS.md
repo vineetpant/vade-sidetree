@@ -4,6 +4,15 @@
 
 ### Features
 
+### Fixes
+
+
+### Deprecations
+
+## v0.0.4
+
+### Features
+
 - add support for passing keys to DID creation
 - add new flag `waitForCompletion` to the creation and update process
 - add typescript typings
@@ -14,8 +23,6 @@
 
 - Fix the correct payload for IETF json patches
 - fix in3 request list fallback payload
-
-### Deprecations
 
 ## v0.0.3
 
