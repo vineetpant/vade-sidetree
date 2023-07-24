@@ -19,6 +19,12 @@ extern crate vade;
 use crate::datatypes::*;
 #[cfg(feature = "sdk")]
 use crate::in3_request_list::{send_request, ResolveHttpRequest};
+use crate::vade_sidetree_client::{
+    did::{JsonWebKey, PublicKey, Service},
+    multihash,
+    operations::{self, DeactivateOperationInput, OperationInput},
+    operations::{RecoverOperationInput, UpdateOperationInput},
+};
 use async_std::task;
 use async_trait::async_trait;
 use core::time;
@@ -30,12 +36,6 @@ use std::error::Error;
 #[cfg(feature = "sdk")]
 use std::os::raw::c_void;
 use vade::{VadePlugin, VadePluginResultValue};
-use crate::vade_sidetree_client::{
-    did::{JsonWebKey, PublicKey, Service},
-    multihash,
-    operations::{self, DeactivateOperationInput, OperationInput},
-    operations::{RecoverOperationInput, UpdateOperationInput},
-};
 
 const DEFAULT_URL: &str = "https://sidetree.evan.network/3.0/";
 const EVAN_METHOD: &str = "did:evan";
@@ -238,7 +238,7 @@ impl VadePlugin for VadeSidetree {
                 } else {
                     task::sleep(time::Duration::from_millis(1_000)).await;
                     timeout_counter += 1;
-                    if timeout_counter == 60 {
+                    if timeout_counter == 120 {
                         return Ok(VadePluginResultValue::Success(Some(
                             "Error waiting for DID create".to_string(),
                         )));
@@ -374,7 +374,7 @@ impl VadePlugin for VadeSidetree {
                 if !update_found {
                     task::sleep(time::Duration::from_millis(1_000)).await;
                     timeout_counter += 1;
-                    if timeout_counter == 60 {
+                    if timeout_counter == 120 {
                         return Ok(VadePluginResultValue::Success(Some(
                             "Error waiting for DID update".to_string(),
                         )));
@@ -416,12 +416,12 @@ impl VadePlugin for VadeSidetree {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
-    use std::sync::Once;
     use crate::vade_sidetree_client::{
         did::{Document, JsonWebKey, Purpose, Service},
         secp256k1, Patch,
     };
+    use serial_test::serial;
+    use std::sync::Once;
 
     static INIT: Once = Once::new();
 

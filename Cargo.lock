@@ -1584,7 +1584,7 @@ dependencies = [
 
 [[package]]
 name = "vade-sidetree"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "async-std",
  "async-trait",
