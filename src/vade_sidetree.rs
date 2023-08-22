@@ -37,7 +37,7 @@ use std::error::Error;
 use std::os::raw::c_void;
 use vade::{VadePlugin, VadePluginResultValue};
 
-const DEFAULT_URL: &str = "https://sidetree.evan.network/3.0/";
+const DEFAULT_URL: &str = "https://sidetree.equs.qa-idm.bc-labs.dev/3.0/";
 const EVAN_METHOD: &str = "did:evan";
 const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
 const DID_SIDETREE: &str = "sidetree";
@@ -234,15 +234,18 @@ impl VadePlugin for VadeSidetree {
                     )
                     .await?;
                 if res != "Not Found" {
-                    update_found = true;
-                } else {
-                    task::sleep(time::Duration::from_millis(1_000)).await;
-                    timeout_counter += 1;
-                    if timeout_counter == 120 {
-                        return Ok(VadePluginResultValue::Success(Some(
-                            "Error waiting for DID create".to_string(),
-                        )));
+                    let did_doc: SidetreeDidDocument = serde_json::from_str(&res)?;
+                    if did_doc.did_document_metadata.method.published == true {
+                        update_found = true;
+                        break;
                     }
+                }
+                task::sleep(time::Duration::from_millis(1_000)).await;
+                timeout_counter += 1;
+                if timeout_counter == 120 {
+                    return Ok(VadePluginResultValue::Success(Some(
+                        "Error waiting for DID create".to_string(),
+                    )));
                 }
             }
         }
