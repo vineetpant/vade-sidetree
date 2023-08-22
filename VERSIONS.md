@@ -6,6 +6,7 @@
 
 ### Fixes
 
+- Add verification of "published" flag when creating a did
 
 ### Deprecations
 
