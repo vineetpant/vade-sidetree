@@ -28,7 +28,6 @@ use crate::vade_sidetree_client::{
 use async_std::task;
 use async_trait::async_trait;
 use core::time;
-use log::debug;
 use regex::Regex;
 #[cfg(not(feature = "sdk"))]
 use reqwest::Client;
@@ -239,7 +238,6 @@ impl VadePlugin for VadeSidetree {
                     )
                     .await?;
                 if res != "Not Found" {
-                    debug!("test resolve {:?}", &res);
                     let did_doc: SidetreeDidDocument = serde_json::from_str(&res)?;
                     if did_doc.did_document_metadata.method.published == true {
                         update_found = true;
