@@ -7,7 +7,7 @@
 ### Fixes
 
 - Add verification of "published" flag when creating a did
-- Retry polling ing status code is other than 200 from sidetree
+- Retry polling status code is other than 200 from sidetree
 
 ### Deprecations
 
