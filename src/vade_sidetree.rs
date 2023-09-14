@@ -28,9 +28,11 @@ use crate::vade_sidetree_client::{
 use async_std::task;
 use async_trait::async_trait;
 use core::time;
+use log::debug;
 use regex::Regex;
 #[cfg(not(feature = "sdk"))]
 use reqwest::Client;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 #[cfg(feature = "sdk")]
@@ -136,16 +138,20 @@ impl VadeSidetree {
                 )?;
             } else {
                 let client = reqwest::Client::new();
-                res = client
-                    .get(api_url)
-                    .send()
-                    .await?
-                    .text()
+                let request = client
+                .get(api_url)
+                .send()
+                .await?;
+                let status_code = request.status();
+                if status_code.as_u16() > 200 {
+                    res = "Not Found".to_string();
+                } else {
+                    res = request.text()
                     .await
                     .map_err(|err| format!("DID resolve request failed; {}", &err.to_string()))?;
+                }
             }
         }
-
         Ok(res)
     }
 }
@@ -216,7 +222,6 @@ impl VadePlugin for VadeSidetree {
 
             }
         }
-
         let response = DidCreateResponse {
             update_key: create_result.update_key,
             recovery_key: create_result.recovery_key,
@@ -234,6 +239,7 @@ impl VadePlugin for VadeSidetree {
                     )
                     .await?;
                 if res != "Not Found" {
+                    debug!("test resolve {:?}", &res);
                     let did_doc: SidetreeDidDocument = serde_json::from_str(&res)?;
                     if did_doc.did_document_metadata.method.published == true {
                         update_found = true;
