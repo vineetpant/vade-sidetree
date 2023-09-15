@@ -31,7 +31,6 @@ use core::time;
 use regex::Regex;
 #[cfg(not(feature = "sdk"))]
 use reqwest::Client;
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 #[cfg(feature = "sdk")]
@@ -199,7 +198,7 @@ impl VadePlugin for VadeSidetree {
         #[cfg(feature = "sdk")]
         let resolve_http_request = self.config.resolve_http_request;
 
-        let res: String;
+        let mut res: String = "".to_string();
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "sdk")]{
@@ -211,14 +210,27 @@ impl VadePlugin for VadeSidetree {
                 )?.to_string();
             } else {
                 let client = reqwest::Client::new();
-                res = client
-                    .post(api_url)
-                    .json(&create_result.operation_request)
-                    .send()
-                    .await?
-                    .text()
-                    .await?;
-
+                let mut successful_create = false;
+                let mut timeout_counter = 0;
+                while !successful_create {
+                    let request = client
+                        .post(&api_url)
+                        .json(&create_result.operation_request)
+                        .send()
+                        .await?;
+                    if request.status().as_u16() == 200 {
+                        successful_create = true;
+                        res = request.text().await?;
+                    } else {
+                        task::sleep(time::Duration::from_millis(1_000)).await;
+                        timeout_counter += 1;
+                        if timeout_counter == 120 {
+                            return Ok(VadePluginResultValue::Success(Some(
+                                "Error waiting for DID create".to_string(),
+                            )));
+                        }
+                    }
+                }
             }
         }
         let response = DidCreateResponse {
@@ -342,12 +354,32 @@ impl VadePlugin for VadeSidetree {
             Err(err) => return Err(Box::from(format!("{err}"))),
         };
 
-        let res;
+        let mut res: String = "".to_string();
         cfg_if::cfg_if! {
             if #[cfg(feature = "sdk")]{
                 res = send_request(api_url, "POST".to_string(), Some(serde_json::to_string(&update_output.operation_request)?), request_pointer, resolve_http_request)?
             } else {
-                res = client.post(api_url).json(&update_output.operation_request).send().await?.text().await?
+                let mut successful_update = false;
+                let mut timeout_counter = 0;
+                while !successful_update {
+                    let request = client
+                        .post(&api_url)
+                        .json(&update_output.operation_request)
+                        .send()
+                        .await?;
+                    if request.status().as_u16() == 200 {
+                        successful_update = true;
+                        res = request.text().await?;
+                    } else {
+                        task::sleep(time::Duration::from_millis(1_000)).await;
+                        timeout_counter += 1;
+                        if timeout_counter == 120 {
+                            return Ok(VadePluginResultValue::Success(Some(
+                                "Error waiting for DID update".to_string(),
+                            )));
+                        }
+                    }
+                }
             }
         }
 
