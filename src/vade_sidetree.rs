@@ -37,8 +37,8 @@ use std::error::Error;
 use std::os::raw::c_void;
 use vade::{VadePlugin, VadePluginResultValue};
 
-const DEFAULT_URL: &str = "https://sidetree.equs.qa-idm.bc-labs.dev/3.0/";
-const EVAN_METHOD: &str = "did:evan";
+const DEFAULT_URL: &str = "http://localhost:3000/api/1.0/";
+const EVAN_METHOD: &str = "did:elem:eigen";
 const METHOD_REGEX: &str = r#"^(.*):0x(.*)$"#;
 const DID_SIDETREE: &str = "sidetree";
 
@@ -477,7 +477,7 @@ mod tests {
         // first create a new DID on sidetree
         let result = did_handler
             .did_create(
-                "did:evan",
+                EVAN_METHOD,
                 "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
                 &payload,
             )
@@ -534,7 +534,7 @@ mod tests {
         let mut did_handler = VadeSidetree::new(std::env::var("SIDETREE_API_URL").ok());
         let result = did_handler
             .did_create(
-                "did:evan",
+                EVAN_METHOD,
                 "{\"type\":\"sidetree\",\"waitForCompletion\":true}",
                 "{}",
             )
@@ -573,7 +573,7 @@ mod tests {
                 "d": "gU5iJcTcsSA0q2Ajy5bnBQIzOUthMty7swtGGcWORDw"
             }
           }"###;
-        let result = did_handler.did_create("did:evan", options, payload).await;
+        let result = did_handler.did_create(EVAN_METHOD, options, payload).await;
 
         assert_eq!(result.is_ok(), true);
 
